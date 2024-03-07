@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <style type="text/css" rel="stylesheet">
+    #mqtt{ border: 1px solid #444; overflow-x:hidden; overflow-y:auto; background-color:#333; color: #EEE; text-shadow:#000 0 0 2px; height: 400px; padding: 10px; font-size:12px; line-height:20px;}
+    .monospace{font-family: Monaco,"Bitstream Vera Sans Mono","Lucida Console",Terminal,monospace;}
+    .selection::selection , .selection *::selection{background: #EEE;color:#000;border-color:#000; text-shadow:#fff 0 0 2px;}
+    .selection::-moz-selection , .selection *::-moz-selection{background: #EEE;color:#000;border-color:#000; text-shadow:#fff 0 0 2px;}
+  </style>
+</head>
+<body>
+	Topic: <input type="text" id="i_topic" name="n_topic"></br>
+	<div id="mqtt" class="monospace selection"></div>
+	<script type="text/javascript">
+(function() {
+	var lines = 0;
+	var buffer = $('#mqtt');
+	var socket = io.connect("/"); // http://localhost:8000");
+		socket.on('connect', function() {
+		console.log('Connected to:', socket.host);
+	});
+	socket.on('mqtt', function(message) {
+		if (message.topic) {
+			try {
+				message.content=JSON.stringify(message.content);
+			} catch {};
+			buffer.append( message.timestamp.toString() +':&nbsp;<b>'+message.topic.toString() + '</b>&nbsp;&nbsp;' + message.content.toString() + '<br/>' );
+			buffer.scrollTop(lines*100);
+			lines++;
+		}    
+	});
+
+	$( "#i_topic" ).change(function() {
+	  socket.emit("wishtopic",this.value);
+	  $('#mqtt').empty();
+	});
+
+})();
+	</script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "dependencies": {
+    "dateformat": "",
+    "express": "",
+    "http": "",
+    "mqtt": "",
+    "socket.io": ""
+  },
+  "name": "mqttstream",
+  "version": "1.0.0",
+  "description": "stream mqtt to browser",
+  "main": "mqtt.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "mqtt.js #"
+  },
+  "author": "int2k",
+  "license": "ISC"
+}

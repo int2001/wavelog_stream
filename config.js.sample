@@ -1,0 +1,7 @@
+const config = {
+  mqttserver: {
+    host: "mqtt://[your mqtt-server hiere]"
+  }
+};
+
+module.exports = config;
