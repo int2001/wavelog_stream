@@ -9,35 +9,95 @@
     .monospace{font-family: Monaco,"Bitstream Vera Sans Mono","Lucida Console",Terminal,monospace;}
     .selection::selection , .selection *::selection{background: #EEE;color:#000;border-color:#000; text-shadow:#fff 0 0 2px;}
     .selection::-moz-selection , .selection *::-moz-selection{background: #EEE;color:#000;border-color:#000; text-shadow:#fff 0 0 2px;}
+	table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
   </style>
 </head>
 <body>
-	<div id="mqtt" class="monospace selection"></div>
+<h1>Live QSOs</h1>
+    <table id="messagesTable">
+        <thead>
+            <tr>
+                <th>Wann</th>
+                <th>Von</th>
+                <th>Von Grid</th>
+                <th>Nach</th>
+                <th>Nach Grid</th>
+                <th>Band</th>
+                <th>Mode</th>
+                <th>RSTR</th>
+                <th>RSTS</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Rows will be dynamically added here -->
+        </tbody>
+    </table>
 	<script type="text/javascript">
-(function() {
-	var lines = 0;
-	var buffer = $('#mqtt');
-	var socket = io.connect("/"); // http://localhost:8000");
-		socket.on('connect', function() {
-		console.log('Connected to:', socket.host);
-	});
-	socket.on('mqtt', function(message) {
-			try {
-				showit=JSON.stringify(message);
-			} catch {};
-			buffer.append( showit.toString() + '<br/>' );
-			buffer.scrollTop(lines*100);
-			lines++;
-	});
+		(function() {
+					const tableBody = document.getElementById('messagesTable').querySelector('tbody');
+					var lines = 0;
+					var buffer = $('#mqtt');
+					var socket = io.connect("/"); // http://localhost:8000");
+					socket.on('connect', function() {
+								console.log('Connected to:', socket.host);
+							});
+					socket.on('mqtt', function(message) {
+								try {
+									showit=JSON.stringify(message);
+								} catch {};
+								const row = document.createElement('tr');
+								const timestampCell = document.createElement('td');
+								const CellCall = document.createElement('td');
+								const CellGrid = document.createElement('td');
+								const CellStationCall = document.createElement('td');
+								const CellStationGrid = document.createElement('td');
+								const CellBand = document.createElement('td');
+								const CellMode = document.createElement('td');
+								const CellRSTR = document.createElement('td');
+								const CellRSTS = document.createElement('td');
 
-	/* 
-	$( "#i_topic" ).change(function() {
-	  socket.emit("wishtopic",this.value);
-	  $('#mqtt').empty();
-	});
-	*/
+								CellCall.textContent = message.call;
+								CellGrid.textContent = message.grid;
+								CellStationCall.textContent = message.station_call;
+								CellStationGrid.textContent = message.station_grid;
+								CellBand.textContent = message.band;
+								CellMode.textContent = message.mode;
+								CellRSTR.textContent = message.RST_RCVD;
+								CellRSTS.textContent = message.RST_SENT;
+								timestampCell.textContent = message.qso_time;;
 
-})();
+								row.appendChild(timestampCell);
+								row.appendChild(CellStationCall);
+								row.appendChild(CellStationGrid);
+								row.appendChild(CellCall);
+								row.appendChild(CellGrid);
+								row.appendChild(CellBand);
+								row.appendChild(CellMode);
+								row.appendChild(CellRSTR);
+								row.appendChild(CellRSTS);
+								tableBody.insertBefore(row, tableBody.firstChild);
+
+							});
+
+					/* 
+	       $( "#i_topic" ).change(function() {
+	       socket.emit("wishtopic",this.value);
+	       $('#mqtt').empty();
+	       });
+							 */
+
+				})();
 	</script>
 </body>
 </html>

@@ -36,7 +36,6 @@ io.on('connection', (socket) => {			// Neue socket.io Connection?
 			try {
 				messagex=JSON.parse(message);		// Versuchen mqtt-nachricht durch den jsonparser zu parsen
 				msg.content=messagex;			// ergebnis in content haemmern
-				console.log("JSON");
 			} catch(e) {
 				console.log("No JSON");
 			}
@@ -45,6 +44,7 @@ io.on('connection', (socket) => {			// Neue socket.io Connection?
 		}
 		tobrowser=parse_msg(msg.content);
 		socket.emit("mqtt",tobrowser);				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
+		console.log('QSO from: '+tobrowser.station_call+' with '+tobrowser.call+' in Mode: '+tobrowser.mode+' at '+tobrowser.qso_time);
 		// socket.emit("mqtt",parse_msg(msg));				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
 	});
 
@@ -53,14 +53,17 @@ io.on('connection', (socket) => {			// Neue socket.io Connection?
 function parse_msg(msg) {
 	let retmsg={};
 	retmsg.call=msg.COL_CALL;
-	retmsg.station_call=msg.STATION_CALLSIGN;
+	retmsg.station_call=msg.COL_STATION_CALLSIGN;
 	retmsg.station_grid=msg.COL_MY_GRIDSQUARE;
 	retmsg.grid=msg.COL_GRIDSQUARE;
 	retmsg.band=msg.COL_BAND;
 	retmsg.mode=msg.COL_MODE
+	retmsg.RST_RCVD=msg.COL_RST_RCVD;
+	retmsg.RST_SENT=msg.COL_RST_SENT;
+	retmsg.qso_time=msg.COL_TIME_ON;
 	return retmsg;
 }
 
-http.listen(8000, () => {						// Webserver starten
+http.listen(8000,'127.0.0.1', () => {						// Webserver starten
   console.log(`Socket.IO server running at http://localhost:8000/`);	// debug
 });
