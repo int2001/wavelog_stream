@@ -43,9 +43,15 @@ mqttC.on('message', function (topic, message) {	// Handler, wenn mqtt-message ko
 	} else {
 		msg.content=message.toString();			// Ist nix json? dann ab in "content" damit
 	}
-	tobrowser=parse_msg(msg.content);
-	io.emit("mqtt",tobrowser);				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
-	console.log('QSO from: '+tobrowser.station_call+' with '+tobrowser.call+' in Mode: '+tobrowser.mode+' at '+tobrowser.qso_time);
+	if (topic.startsWith('wavelog/qso/logged')) {
+		tobrowser=parse_qso_msg(msg.content);
+		io.emit("mqtt",tobrowser);				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
+		console.log(topic+' / QSO from: '+tobrowser.station_call+' with '+tobrowser.call+' in Mode: '+tobrowser.mode+' at '+tobrowser.qso_time);
+	} else {
+		tobrowser=parse_cat_msg(topic,msg.content);
+		io.emit("cat",tobrowser);				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
+		console.log(topic+' / CAT for User '+tobrowser.user_id+' at '+tobrowser.qrg+' in Mode '+tobrowser.mode);
+	}
 	// socket.emit("mqtt",parse_msg(msg));				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
 });
 
@@ -57,7 +63,16 @@ io.on('connection', (socket) => {			// Neue socket.io Connection?
 
 });
 
-function parse_msg(msg) {
+function parse_cat_msg(topic,msg) {
+	let retmsg={};
+	retmsg.user_id=topic.substring(topic.lastIndexOf('/') + 1)
+	retmsg.qrg=msg.frequency;
+	retmsg.mode=msg.mode;
+	retmsg.time=msg.timestamp;
+	return retmsg;
+}
+
+function parse_qso_msg(msg) {
 	let retmsg={};
 	retmsg.call=msg.COL_CALL;
 	retmsg.station_call=msg.COL_STATION_CALLSIGN;
