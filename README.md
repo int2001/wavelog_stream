@@ -2,11 +2,10 @@
 
 # Install:
 1. git clone it
-2. you need nodeJS / npm
-3. npm install
+2. you need nodeJS / npm or bun
+3. `npm install` or `bun i`
 4. rename config.js.sample to config.js
 5. adjust config.js to your local MQTT-Broker
-6. node ./mqtt.js
+6. ` node ./mqtt.js` or `bun ./mqtt.js`
 7. Point browser to localhost:8000
-8. Enter Topic to subscribe in Input-Field and press Return
-9. Enjoy streaming
+8. Enjoy streaming
