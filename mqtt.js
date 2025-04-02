@@ -65,6 +65,7 @@ function parse_msg(msg) {
 	retmsg.grid=msg.COL_GRIDSQUARE;
 	retmsg.band=msg.COL_BAND;
 	retmsg.mode=msg.COL_MODE
+	retmsg.qrg=msg.COL_FREQ/1000;
 	retmsg.RST_RCVD=msg.COL_RST_RCVD;
 	retmsg.RST_SENT=msg.COL_RST_SENT;
 	retmsg.qso_time=msg.COL_TIME_ON;

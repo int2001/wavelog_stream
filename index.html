@@ -25,7 +25,7 @@
   </style>
 </head>
 <body>
-<h1>Live QSOs by DJ7NT</h1>
+<h1>Live QSO-View</h1>
     <table id="messagesTable">
         <thead>
             <tr>
@@ -35,6 +35,7 @@
                 <th>Nach</th>
                 <th>Nach Grid</th>
                 <th>Band</th>
+                <th>QRG</th>
                 <th>Mode</th>
                 <th>RSTR</th>
                 <th>RSTS</th>
@@ -64,6 +65,7 @@
 								const CellStationCall = document.createElement('td');
 								const CellStationGrid = document.createElement('td');
 								const CellBand = document.createElement('td');
+								const CellQRG = document.createElement('td');
 								const CellMode = document.createElement('td');
 								const CellRSTR = document.createElement('td');
 								const CellRSTS = document.createElement('td');
@@ -73,6 +75,7 @@
 								CellStationCall.textContent = message.station_call;
 								CellStationGrid.textContent = message.station_grid;
 								CellBand.textContent = message.band;
+								CellQRG.textContent = message.qrg;
 								CellMode.textContent = message.mode;
 								CellRSTR.textContent = message.RST_RCVD;
 								CellRSTS.textContent = message.RST_SENT;
@@ -84,6 +87,7 @@
 								row.appendChild(CellCall);
 								row.appendChild(CellGrid);
 								row.appendChild(CellBand);
+								row.appendChild(CellQRG);
 								row.appendChild(CellMode);
 								row.appendChild(CellRSTR);
 								row.appendChild(CellRSTS);
