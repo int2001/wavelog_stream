@@ -16,12 +16,15 @@ app.get('/', (req, res) => {			// Routing fuer index.html
 io.on('connection', (socket) => {			// Neue socket.io Connection?
 	console.log(socket.id + " connected");		// Debug
 	client[socket.id]  = mqtt.connect(mqttserver);	// Dann neue MQTT-Verbindung aufmachen (je sock.io CLient eine, indiziert ueber die socket.id)
+	client[socket.id].subscribe('wavelog/#');	// Vom alten topic "unscubriben"
+	/*
 	socket.on('wishtopic', (msg) => { 		// Von der Website kommt ein neuer Topic-Wunsch
 		client[socket.id].unsubscribe(topica);	// Vom alten topic "unscubriben"
 		client[socket.id].subscribe(msg);	// Neues Subscriben
 		topica=msg;				// Neues merken
 		console.log('message: ' + msg); 	// Debug-Log
 	});
+	*/
 	socket.on("disconnect", (reason) => {		// Socket.io Client gone? Dann mqtt fuer diesen Client wieder schliessen
 		client[socket.id].end();
 		console.log(socket.id + " disconnected");
@@ -33,16 +36,30 @@ io.on('connection', (socket) => {			// Neue socket.io Connection?
 			try {
 				messagex=JSON.parse(message);		// Versuchen mqtt-nachricht durch den jsonparser zu parsen
 				msg.content=messagex;			// ergebnis in content haemmern
-			} catch(e) {}
+				console.log("JSON");
+			} catch(e) {
+				console.log("No JSON");
+			}
 		} else {
 			msg.content=message.toString();			// Ist nix json? dann ab in "content" damit
 		}
-		msg.timestamp=dateFormat(date, "yyyy-mm-dd hh:MM:ss");	// timestamp formatieren
-		msg.topic=topic.toString();				// topic in das nachrichtenobject packen
-		socket.emit("mqtt",msg);				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
+		tobrowser=parse_msg(msg.content);
+		socket.emit("mqtt",tobrowser);				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
+		// socket.emit("mqtt",parse_msg(msg));				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
 	});
 
 });
+
+function parse_msg(msg) {
+	let retmsg={};
+	retmsg.call=msg.COL_CALL;
+	retmsg.station_call=msg.STATION_CALLSIGN;
+	retmsg.station_grid=msg.COL_MY_GRIDSQUARE;
+	retmsg.grid=msg.COL_GRIDSQUARE;
+	retmsg.band=msg.COL_BAND;
+	retmsg.mode=msg.COL_MODE
+	return retmsg;
+}
 
 http.listen(8000, () => {						// Webserver starten
   console.log(`Socket.IO server running at http://localhost:8000/`);	// debug

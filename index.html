@@ -12,7 +12,6 @@
   </style>
 </head>
 <body>
-	Topic: <input type="text" id="i_topic" name="n_topic"></br>
 	<div id="mqtt" class="monospace selection"></div>
 	<script type="text/javascript">
 (function() {
@@ -23,20 +22,20 @@
 		console.log('Connected to:', socket.host);
 	});
 	socket.on('mqtt', function(message) {
-		if (message.topic) {
 			try {
-				message.content=JSON.stringify(message.content);
+				showit=JSON.stringify(message);
 			} catch {};
-			buffer.append( message.timestamp.toString() +':&nbsp;<b>'+message.topic.toString() + '</b>&nbsp;&nbsp;' + message.content.toString() + '<br/>' );
+			buffer.append( showit.toString() + '<br/>' );
 			buffer.scrollTop(lines*100);
 			lines++;
-		}    
 	});
 
+	/* 
 	$( "#i_topic" ).change(function() {
 	  socket.emit("wishtopic",this.value);
 	  $('#mqtt').empty();
 	});
+	*/
 
 })();
 	</script>
