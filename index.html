@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+  <script src="/jquery/jquery.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <style type="text/css" rel="stylesheet">
     #mqtt{ border: 1px solid #444; overflow-x:hidden; overflow-y:auto; background-color:#333; color: #EEE; text-shadow:#000 0 0 2px; height: 400px; padding: 10px; font-size:12px; line-height:20px;}
@@ -21,6 +21,7 @@
         th {
             background-color: #f4f4f4;
         }
+	.new-row { background-color: #ff0099; transition: background-color 1.5s; }
   </style>
 </head>
 <body>
@@ -86,7 +87,9 @@
 								row.appendChild(CellMode);
 								row.appendChild(CellRSTR);
 								row.appendChild(CellRSTS);
+								row.classList.add('new-row');
 								tableBody.insertBefore(row, tableBody.firstChild);
+								$(row).removeClass('new-row', 1500);
 
 							});
 

@@ -4,10 +4,14 @@ var mqttserver=config.mqttserver.host;		// mqtt-host aus json im configfile hole
 var mqtt = require('mqtt');			// mqtt-module einbinden
 var dateFormat = require('dateformat');		// date-format-module einbinden
 var topica='#';					// variable in der das topic gehalten wird
-const app = require('express')();		// http-express framework laden (macht routing, etc.)
+const path = require('path');
+const express = require('express');
+const app = express();		// http-express framework laden (macht routing, etc.)
 const http = require('http').Server(app);	// http-server module laden
 const io = require('socket.io')(http);		// socket.io einbinden
 var client=new Array();				// Haelt die einzelnen mqtt-clients je (browser-)client
+
+app.use('/jquery', express.static(path.join(__dirname, 'node_modules', 'jquery', 'dist')));
 
 app.get('/', (req, res) => {			// Routing fuer index.html
   res.sendFile(__dirname + '/index.html');	// index.html rauspusten
