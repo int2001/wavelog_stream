@@ -21,7 +21,7 @@
         th {
             background-color: #f4f4f4;
         }
-	.new-row { background-color: #ff0099; transition: background-color 1.5s; }
+	.new-row { background-color: #ff0099; transition: background-color 1.5s ease; }
   </style>
 </head>
 <body>
@@ -76,7 +76,7 @@
 								CellMode.textContent = message.mode;
 								CellRSTR.textContent = message.RST_RCVD;
 								CellRSTS.textContent = message.RST_SENT;
-								timestampCell.textContent = message.qso_time;;
+								timestampCell.textContent = tsclean(message.qso_time);
 
 								row.appendChild(timestampCell);
 								row.appendChild(CellStationCall);
@@ -89,7 +89,9 @@
 								row.appendChild(CellRSTS);
 								row.classList.add('new-row');
 								tableBody.insertBefore(row, tableBody.firstChild);
-								$(row).removeClass('new-row', 1500);
+								setTimeout(() => {
+									row.classList.remove('new-row');
+								}, 1500);
 
 							});
 
@@ -101,6 +103,13 @@
 							 */
 
 				})();
+		function tsclean(timestamp) {
+			const parts = timestamp.split(':');
+			if (parts.length === 2) {
+				return `${timestamp}:00`;
+			}
+			return timestamp; // Already normalized
+		}
 	</script>
 </body>
 </html>

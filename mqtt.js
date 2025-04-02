@@ -14,42 +14,45 @@ var client=new Array();				// Haelt die einzelnen mqtt-clients je (browser-)clie
 app.use('/jquery', express.static(path.join(__dirname, 'node_modules', 'jquery', 'dist')));
 
 app.get('/', (req, res) => {			// Routing fuer index.html
-  res.sendFile(__dirname + '/index.html');	// index.html rauspusten
+	res.sendFile(__dirname + '/index.html');	// index.html rauspusten
+});
+
+const mqttC=mqtt.connect(mqttserver);
+mqttC.on('connect', () => {
+	console.log('Connected to MQTT broker');
+	mqttC.subscribe('wavelog/#', (err) => {
+		if (!err) {
+			console.log(`Subscribed to topic`);
+		} else {
+			console.log('Error');
+			console.log(err);
+		}
+	});
+});
+
+mqttC.on('message', function (topic, message) {	// Handler, wenn mqtt-message kommt
+	date=new Date();					// Timestamp in date merken
+	msg={};							// msg-object initialisieren
+	if (message.toString().substring(0,1)=='{') {		// JSON-String? Dann aufbereiten
+		try {
+			messagex=JSON.parse(message);		// Versuchen mqtt-nachricht durch den jsonparser zu parsen
+			msg.content=messagex;			// ergebnis in content haemmern
+		} catch(e) {
+			console.log("No JSON");
+		}
+	} else {
+		msg.content=message.toString();			// Ist nix json? dann ab in "content" damit
+	}
+	tobrowser=parse_msg(msg.content);
+	io.emit("mqtt",tobrowser);				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
+	console.log('QSO from: '+tobrowser.station_call+' with '+tobrowser.call+' in Mode: '+tobrowser.mode+' at '+tobrowser.qso_time);
+	// socket.emit("mqtt",parse_msg(msg));				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
 });
 
 io.on('connection', (socket) => {			// Neue socket.io Connection?
 	console.log(socket.id + " connected");		// Debug
-	client[socket.id]  = mqtt.connect(mqttserver);	// Dann neue MQTT-Verbindung aufmachen (je sock.io CLient eine, indiziert ueber die socket.id)
-	client[socket.id].subscribe('wavelog/#');	// Vom alten topic "unscubriben"
-	/*
-	socket.on('wishtopic', (msg) => { 		// Von der Website kommt ein neuer Topic-Wunsch
-		client[socket.id].unsubscribe(topica);	// Vom alten topic "unscubriben"
-		client[socket.id].subscribe(msg);	// Neues Subscriben
-		topica=msg;				// Neues merken
-		console.log('message: ' + msg); 	// Debug-Log
-	});
-	*/
 	socket.on("disconnect", (reason) => {		// Socket.io Client gone? Dann mqtt fuer diesen Client wieder schliessen
-		client[socket.id].end();
 		console.log(socket.id + " disconnected");
-	});
-	client[socket.id].on('message', function (topic, message) {	// Handler, wenn mqtt-message kommt
-		date=new Date();					// Timestamp in date merken
-		msg={};							// msg-object initialisieren
-		if (message.toString().substring(0,1)=='{') {		// JSON-String? Dann aufbereiten
-			try {
-				messagex=JSON.parse(message);		// Versuchen mqtt-nachricht durch den jsonparser zu parsen
-				msg.content=messagex;			// ergebnis in content haemmern
-			} catch(e) {
-				console.log("No JSON");
-			}
-		} else {
-			msg.content=message.toString();			// Ist nix json? dann ab in "content" damit
-		}
-		tobrowser=parse_msg(msg.content);
-		socket.emit("mqtt",tobrowser);				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
-		console.log('QSO from: '+tobrowser.station_call+' with '+tobrowser.call+' in Mode: '+tobrowser.mode+' at '+tobrowser.qso_time);
-		// socket.emit("mqtt",parse_msg(msg));				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
 	});
 
 });
@@ -69,5 +72,5 @@ function parse_msg(msg) {
 }
 
 http.listen(8000,'127.0.0.1', () => {						// Webserver starten
-  console.log(`Socket.IO server running at http://localhost:8000/`);	// debug
+	console.log(`Socket.IO server running at http://localhost:8000/`);	// debug
 });
