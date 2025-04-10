@@ -10,6 +10,6 @@
 7. Point browser to localhost:8000
 8. Enjoy streaming
 
-# Prequisites:
+# Prerequisites:
 * MQTT Server (`apt install mosquitto` or docker-mosquitto)
 * MQTT-Streaming at wavelog enabled (`config.php`-switch: `$config['mqtt_server']='your_mosquitto_server';`)
