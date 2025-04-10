@@ -42,11 +42,18 @@ mqttC.on('message', function (topic, message) {	// Handler, wenn mqtt-message ko
 	}
 	if (topic.startsWith('wavelog/qso/logged')) {
 		tobrowser=parse_qso_msg(msg.content);
-		io.emit("mqtt",tobrowser);				// und raus an den Browser damit
+		if (tobrowser.qso_time) {
+			tobrowser.qso_age=dinmin(tobrowser.qso_time);
+			if (tobrowser.qso_age<=10) {
+				io.emit("mqtt",tobrowser);				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
+			}
+		} else {
+			console.log("No Timestamp!");
+		}
 		console.log(topic+' / QSO from: '+tobrowser.station_call+' with '+tobrowser.call+' in Mode: '+tobrowser.mode+' at '+tobrowser.qso_time);
 	} else {
 		tobrowser=parse_cat_msg(topic,msg.content);
-		io.emit("cat",tobrowser);				// und raus an den Browser damit
+		// io.emit("cat",tobrowser);				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
 		console.log(topic+' / CAT for User '+tobrowser.user_id+' at '+tobrowser.qrg+' in Mode '+tobrowser.mode);
 	}
 });
@@ -81,6 +88,10 @@ function parse_qso_msg(msg) {
 	retmsg.RST_SENT=msg.COL_RST_SENT;
 	retmsg.qso_time=msg.COL_TIME_ON;
 	return retmsg;
+}
+
+const dinmin = (timestamp) => {
+  return Math.floor((Date.now() - new Date(timestamp).getTime()) / 60000);
 }
 
 http.listen(8000,'127.0.0.1', () => {						// Webserver starten
