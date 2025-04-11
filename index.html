@@ -47,65 +47,59 @@
     </table>
 	<script type="text/javascript">
 		(function() {
+					const queryString = window.location.search;
+					const urlParams = new URLSearchParams(queryString);
+					const filter = urlParams.get('call') || '';
 					const tableBody = document.getElementById('messagesTable').querySelector('tbody');
 					var lines = 0;
 					var buffer = $('#mqtt');
 					var socket = io.connect("/"); // http://localhost:8000");
 					socket.on('connect', function() {
-								console.log('Connected to:', socket.host);
-							});
+						console.log('Connected to:', socket.host);
+					});
 					socket.on('mqtt', function(message) {
-								try {
-									showit=JSON.stringify(message);
-								} catch {};
-								const row = document.createElement('tr');
-								const timestampCell = document.createElement('td');
-								const CellCall = document.createElement('td');
-								const CellGrid = document.createElement('td');
-								const CellStationCall = document.createElement('td');
-								const CellStationGrid = document.createElement('td');
-								const CellBand = document.createElement('td');
-								const CellQRG = document.createElement('td');
-								const CellMode = document.createElement('td');
-								const CellRSTR = document.createElement('td');
-								const CellRSTS = document.createElement('td');
+						if ((filter == '') || (filter == message.station_call)) {
+							const row = document.createElement('tr');
+							const timestampCell = document.createElement('td');
+							const CellCall = document.createElement('td');
+							const CellGrid = document.createElement('td');
+							const CellStationCall = document.createElement('td');
+							const CellStationGrid = document.createElement('td');
+							const CellBand = document.createElement('td');
+							const CellQRG = document.createElement('td');
+							const CellMode = document.createElement('td');
+							const CellRSTR = document.createElement('td');
+							const CellRSTS = document.createElement('td');
 
-								CellCall.textContent = message.call;
-								CellGrid.textContent = message.grid;
-								CellStationCall.textContent = message.station_call;
-								CellStationGrid.textContent = message.station_grid;
-								CellBand.textContent = message.band;
-								CellQRG.textContent = message.qrg;
-								CellMode.textContent = message.mode;
-								CellRSTR.textContent = message.RST_RCVD;
-								CellRSTS.textContent = message.RST_SENT;
-								timestampCell.textContent = tsclean(message.qso_time);
+							CellCall.textContent = message.call;
+							CellGrid.textContent = message.grid;
+							CellStationCall.textContent = message.station_call;
+							CellStationGrid.textContent = message.station_grid;
+							CellBand.textContent = message.band;
+							CellQRG.textContent = message.qrg;
+							CellMode.textContent = message.mode;
+							CellRSTR.textContent = message.RST_RCVD;
+							CellRSTS.textContent = message.RST_SENT;
+							timestampCell.textContent = tsclean(message.qso_time);
 
-								row.appendChild(timestampCell);
-								row.appendChild(CellStationCall);
-								row.appendChild(CellStationGrid);
-								row.appendChild(CellCall);
-								row.appendChild(CellGrid);
-								row.appendChild(CellBand);
-								row.appendChild(CellQRG);
-								row.appendChild(CellMode);
-								row.appendChild(CellRSTR);
-								row.appendChild(CellRSTS);
-								row.classList.add('new-row');
-								tableBody.insertBefore(row, tableBody.firstChild);
-								setTimeout(() => {
-									row.classList.remove('new-row');
-								}, 1500);
+							row.appendChild(timestampCell);
+							row.appendChild(CellStationCall);
+							row.appendChild(CellStationGrid);
+							row.appendChild(CellCall);
+							row.appendChild(CellGrid);
+							row.appendChild(CellBand);
+							row.appendChild(CellQRG);
+							row.appendChild(CellMode);
+							row.appendChild(CellRSTR);
+							row.appendChild(CellRSTS);
+							row.classList.add('new-row');
+							tableBody.insertBefore(row, tableBody.firstChild);
+							setTimeout(() => {
+								row.classList.remove('new-row');
+							}, 1500);
+						}
 
-							});
-
-					/* 
-	       $( "#i_topic" ).change(function() {
-	       socket.emit("wishtopic",this.value);
-	       $('#mqtt').empty();
-	       });
-							 */
-
+					});
 				})();
 		function tsclean(timestamp) {
 			const parts = timestamp.split(':');

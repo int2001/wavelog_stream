@@ -56,7 +56,7 @@ mqttC.on('message', function (topic, message) {	// Handler, wenn mqtt-message ko
 		} else {
 			tobrowser=parse_cat_msg(topic,msg.content);
 			// io.emit("cat",tobrowser);				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
-			console.log(topic+' / CAT for User '+tobrowser.user_id+' at '+tobrowser.qrg+' in Mode '+tobrowser.mode);
+			console.log(topic+' / CAT for User '+tobrowser.user_id+' ('+msg.content.user_name+') at '+tobrowser.qrg+' in Mode '+tobrowser.mode);
 		}
 	} else {
 		console.log(msg.content.user_name+' not in Whitelist');
