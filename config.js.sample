@@ -1,7 +1,8 @@
 const config = {
-  mqttserver: {
-    host: "mqtt://[your mqtt-server here]"
-  }
+	mqttserver: {
+		host: "mqtt://[your mqtt-server here]"
+	},
+	whitelist_url: "https://laber"
 };
 
 module.exports = config;
