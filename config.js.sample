@@ -6,7 +6,7 @@ const config = {
 	whitelist_url: "https://laber",
 	whitelist_enabled: false,
 	webport: 8000,
-	webbind:"127.0.0.1"
+	webbind:"0.0.0.0"
 };
 
 module.exports = config;

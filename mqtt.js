@@ -116,7 +116,7 @@ const dinmin = (timestamp) => {
 
 function startup() {
 	getWhitelist();
-	http.listen(config.webport,'127.0.0.1', () => {						// Webserver starten
+	http.listen(config.webport,config.webbind, () => {						// Webserver starten
 		console.log(`Socket.IO server running at http://${config.webbind}:${config.webport}`);	// debug
 	});
 	const intervalID = setInterval(getWhitelist,5*60*1000);

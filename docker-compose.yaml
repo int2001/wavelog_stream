@@ -5,7 +5,7 @@ services:
       dockerfile: ./Dockerfile
     container_name: liveqso
     ports:
-      - 8000:8000	# Exposed port - see WEBPORT above
+      - 8098:8000	# Exposed port - see WEBPORT above
     volumes:
-      - ./config.js:/usr/src/app/config.js
+      - ./config.js:/usr/src/app/config.js:U
     restart: unless-stopped
