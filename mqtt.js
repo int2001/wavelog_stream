@@ -7,6 +7,7 @@ const express = require('express');
 const app = express();		// http-express framework laden (macht routing, etc.)
 const http = require('http').Server(app);	// http-server module laden
 const io = require('socket.io')(http);		// socket.io einbinden
+var whitelist=[];
 
 app.use('/jquery', express.static(path.join(__dirname, 'node_modules', 'jquery', 'dist')));
 
@@ -40,21 +41,25 @@ mqttC.on('message', function (topic, message) {	// Handler, wenn mqtt-message ko
 	} else {
 		msg.content=message.toString();			// Ist nix json? dann ab in "content" damit
 	}
-	if (topic.startsWith('wavelog/qso/logged')) {
-		tobrowser=parse_qso_msg(msg.content);
-		if (tobrowser.qso_time) {
-			tobrowser.qso_age=dinmin(tobrowser.qso_time);
-			if (tobrowser.qso_age<=10) {
-				io.emit("mqtt",tobrowser);				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
+	if (!(config.whitelist_enabled) || (whitelist.whitelist.includes(msg.content.user_name))) {
+		if (topic.startsWith('wavelog/qso/logged')) {
+			tobrowser=parse_qso_msg(msg.content);
+			if (tobrowser.qso_time) {
+				tobrowser.qso_age=dinmin(tobrowser.qso_time);
+				if (tobrowser.qso_age<=10) {
+					io.emit("mqtt",tobrowser);				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
+				}
+			} else {
+				console.log("No Timestamp!");
 			}
+			console.log(topic+' / QSO from: '+tobrowser.station_call+' with '+tobrowser.call+' in Mode: '+tobrowser.mode+' at '+tobrowser.qso_time);
 		} else {
-			console.log("No Timestamp!");
+			tobrowser=parse_cat_msg(topic,msg.content);
+			// io.emit("cat",tobrowser);				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
+			console.log(topic+' / CAT for User '+tobrowser.user_id+' at '+tobrowser.qrg+' in Mode '+tobrowser.mode);
 		}
-		console.log(topic+' / QSO from: '+tobrowser.station_call+' with '+tobrowser.call+' in Mode: '+tobrowser.mode+' at '+tobrowser.qso_time);
 	} else {
-		tobrowser=parse_cat_msg(topic,msg.content);
-		// io.emit("cat",tobrowser);				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
-		console.log(topic+' / CAT for User '+tobrowser.user_id+' at '+tobrowser.qrg+' in Mode '+tobrowser.mode);
+		console.log(msg.content.user_name+' not in Whitelist');
 	}
 });
 
@@ -75,6 +80,21 @@ function parse_cat_msg(topic,msg) {
 	return retmsg;
 }
 
+async function getWhitelist() {
+	if (config.whitelist_enabled) {
+		try {
+			const response = await fetch(config.whitelist_url);
+			if (!response.ok) {
+				throw new Error(`HTTP error! Status: ${response.status}`);
+			}
+			const data = await response.json();
+			whitelist = data;
+		} catch (error) {
+			console.error('Error fetching JSON data:', error);
+		}
+	}
+}
+
 function parse_qso_msg(msg) {
 	let retmsg={};
 	retmsg.call=msg.COL_CALL;
@@ -91,9 +111,15 @@ function parse_qso_msg(msg) {
 }
 
 const dinmin = (timestamp) => {
-  return Math.floor((Date.now() - new Date(timestamp).getTime()) / 60000);
+	return Math.floor((Date.now() - new Date(timestamp).getTime()) / 60000);
 }
 
-http.listen(8000,'127.0.0.1', () => {						// Webserver starten
-	console.log(`Socket.IO server running at http://localhost:8000/`);	// debug
-});
+function startup() {
+	getWhitelist();
+	http.listen(8000,'127.0.0.1', () => {						// Webserver starten
+		console.log(`Socket.IO server running at http://localhost:8000/`);	// debug
+	});
+	const intervalID = setInterval(getWhitelist,5*60*1000);
+}
+
+startup();
