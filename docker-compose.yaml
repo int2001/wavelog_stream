@@ -1,0 +1,11 @@
+version: '3'
+services:
+  liveqso:
+    build:
+      dockerfile: ./Dockerfile
+    container_name: liveqso
+    ports:
+      - 8000:8000	# Exposed port - see WEBPORT above
+    volumes:
+      - ./config.js:/usr/src/app/config.js
+    restart: unless-stopped
