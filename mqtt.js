@@ -6,13 +6,13 @@ const path = require('path');
 const express = require('express');
 const app = express();		// http-express framework laden (macht routing, etc.)
 const http = require('http').Server(app);	// http-server module laden
-const io = require('socket.io')(http);		// socket.io einbinden
+const io = require('socket.io')(http, {path: `${config.prefix}/socket.io`,});		// socket.io einbinden
 var whitelist=[];
 
-app.use('/jquery', express.static(path.join(__dirname, 'node_modules', 'jquery', 'dist')));
+app.use(config.prefix+'/jquery', express.static(path.join(__dirname, 'node_modules', 'jquery', 'dist')));
 
-app.get('/', (req, res) => {			// Routing fuer index.html
-	res.sendFile(__dirname + '/index.html');	// index.html rauspusten
+app.get(config.prefix+'/', (req, res) => {
+	res.sendFile(__dirname + '/index.html');
 });
 
 const mqttC=mqtt.connect(mqttserver);
@@ -116,8 +116,8 @@ const dinmin = (timestamp) => {
 
 function startup() {
 	getWhitelist();
-	http.listen(8000,'127.0.0.1', () => {						// Webserver starten
-		console.log(`Socket.IO server running at http://localhost:8000/`);	// debug
+	http.listen(config.webport,'127.0.0.1', () => {						// Webserver starten
+		console.log(`Socket.IO server running at http://${config.webbind}:${config.webport}`);	// debug
 	});
 	const intervalID = setInterval(getWhitelist,5*60*1000);
 }
