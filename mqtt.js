@@ -63,10 +63,10 @@ mqttC.on('message', function (topic, message) {	// Handler, wenn mqtt-message ko
 	}
 });
 
-io.on('connection', (socket) => {			// Neue socket.io Connection?
-	console.log(socket.id + " connected");		// Debug
+io.on('connection', (socket) => {	
+	console.log(socket.id + " connected // total clients now: "+io.engine.clientsCount);
 	socket.on("disconnect", (reason) => {		
-		console.log(socket.id + " disconnected");
+		console.log(socket.id + " disconnected // total clients now: "+io.engine.clientsCount);
 	});
 
 });
