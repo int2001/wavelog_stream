@@ -30,4 +30,4 @@ COPY --from=prerelease /usr/src/app/index.html .
 
 # run the app
 USER bun
-ENTRYPOINT [ "bun", "run", "mqtt.js" ]
+ENTRYPOINT [ "bun", "run", "/usr/src/app/mqtt.js" ]
