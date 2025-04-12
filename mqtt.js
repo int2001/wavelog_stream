@@ -12,6 +12,7 @@ var whitelist=[];
 app.use(config.prefix+'/jquery', express.static(path.join(__dirname, 'node_modules', 'jquery', 'dist')));
 
 app.get(config.prefix+'/', (req, res) => {
+	res.set('Content-Security-Policy', 'sandbox allow-scripts allow-same-origin');
 	res.sendFile(__dirname + '/index.html');
 });
 
