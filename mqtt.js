@@ -6,13 +6,20 @@ const path = require('path');
 const express = require('express');
 const app = express();		// http-express framework laden (macht routing, etc.)
 const http = require('http').Server(app);	// http-server module laden
-const io = require('socket.io')(http, {path: `${config.prefix}/socket.io`,});		// socket.io einbinden
 var whitelist=[];
+
+
+app.use((req, res, next) => {
+	res.append('Content-Security-Policy', 'sandbox allow-scripts allow-same-origin');
+	res.append('x-frame-options', 'ALLOWALL');
+	next();
+});
+
+const io = require('socket.io')(http, {path: `${config.prefix}/socket.io`,});		// socket.io einbinden
 
 app.use(config.prefix+'/jquery', express.static(path.join(__dirname, 'node_modules', 'jquery', 'dist')));
 
 app.get(config.prefix+'/', (req, res) => {
-	res.set('Content-Security-Policy', 'sandbox allow-scripts allow-same-origin');
 	res.sendFile(__dirname + '/index.html');
 });
 
