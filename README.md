@@ -12,6 +12,8 @@
 7. Point browser to localhost:8000
 8. Enjoy streaming
 
+More Details (e.g. running it with docker) at the [wiki](https://github.com/int2001/wavelog_stream/wiki)
+
 # Prerequisites:
 * MQTT Server (`apt install mosquitto` or docker-mosquitto)
 * MQTT-Streaming at wavelog enabled (`config.php`-switch: `$config['mqtt_server']='your_mosquitto_server';`)
@@ -21,7 +23,6 @@
 * call (fot plain filter on specific call): http://[url]/prefix?call=DJ7NT
 * embed to QRZ: http://[url]/prefix?nojs=1
 * embed to QRZ with callfilter: http://[url]/prefix?nojs=1&call=DJ7NT
-
 
 # Additional informations
 * Whitelist-Example (can also be a static file):
