@@ -52,7 +52,7 @@ function serve(req,res) {
 
 	const msghandler = (topic, message) => {
 		let tobrowser=handle_mqtt(topic,message);
-		if (((req.query.call || '') == '') || (tobrowser.station_call == req.query.call)) {
+		if (((tobrowser.station_call || '') != '') && (((req.query.call || '') == '') || (tobrowser.station_call == req.query.call))) {
 			const eventData = `
 			<tr><td>${tobrowser.qso_time}</td>
 			<td>${tobrowser.station_call}</td>
