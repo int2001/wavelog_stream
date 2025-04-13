@@ -6,11 +6,11 @@
 3. `npm install` or `bun i`
 4. rename config.js.sample to config.js
 5. adjust config.js to your local MQTT-Broker and other things
-  5.1 the whitelist - if enbled - expects a JSON-Array of allowed __usernames__)
-  5.2 the prefix - if you want to host it - e.g. via haproxy - at a special subfolder
-7. ` node ./mqtt.js` or `bun ./mqtt.js`
-8. Point browser to localhost:8000
-9. Enjoy streaming
+   1. the whitelist - if enbled - expects a JSON-Array of allowed __usernames__)
+   2. the prefix - if you want to host it - e.g. via haproxy - at a special subfolder
+6. ` node ./mqtt.js` or `bun ./mqtt.js`
+7. Point browser to localhost:8000
+8. Enjoy streaming
 
 # Prerequisites:
 * MQTT Server (`apt install mosquitto` or docker-mosquitto)
