@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <base href="/">
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <script src="/jquery/jquery.min.js"></script>
-  <script src="/socket.io/socket.io.js"></script>
-  <style type="text/css" rel="stylesheet">
+  <style type="text/css">
     #mqtt{ border: 1px solid #444; overflow-x:hidden; overflow-y:auto; background-color:#333; color: #EEE; text-shadow:#000 0 0 2px; height: 400px; padding: 10px; font-size:12px; line-height:20px;}
     .monospace{font-family: Monaco,"Bitstream Vera Sans Mono","Lucida Console",Terminal,monospace;}
     .selection::selection , .selection *::selection{background: #EEE;color:#000;border-color:#000; text-shadow:#fff 0 0 2px;}
@@ -46,6 +45,14 @@
         </tbody>
     </table>
 	<script type="text/javascript">
+	const base = document.querySelector('base');
+	if (base) {
+		base.href = window.location.pathname;
+	}
+	document.write(`<script src="${base.href}jquery/jquery.min.js"><\/script>`);
+  	document.write(`<script src="${base.href}socket.io/socket.io.js"><\/script>`);
+	</script>
+	<script type="text/javascript" defer>
 		(function() {
 					const queryString = window.location.search;
 					const urlParams = new URLSearchParams(queryString);
@@ -53,7 +60,7 @@
 					const tableBody = document.getElementById('messagesTable').querySelector('tbody');
 					var lines = 0;
 					var buffer = $('#mqtt');
-					var socket = io.connect("/"); // http://localhost:8000");
+					var socket = io.connect({ path: window.location.pathname+"socket.io" }); // http://localhost:8000");
 					socket.on('connect', function() {
 						console.log('Connected to:', socket.host);
 					});
