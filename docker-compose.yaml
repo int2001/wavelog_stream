@@ -1,11 +1,10 @@
 version: '3'
 services:
   liveqso:
-    build:
-      dockerfile: ./Dockerfile
+    build: https://github.com/int2001/wavelog_stream.git#dev
     container_name: liveqso
     ports:
-      - 8098:8000	# Exposed port - see WEBPORT above
+      - 8000:8000
     volumes:
       - ./config.js:/usr/src/app/config.js:U
     restart: unless-stopped

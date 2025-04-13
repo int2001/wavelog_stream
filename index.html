@@ -21,10 +21,13 @@
             background-color: #f4f4f4;
         }
 	.new-row { background-color: #ff0099; transition: background-color 1.5s ease; }
+	.caption { 
+		background-color: #ff0099; transition: background-color 1.5s ease; }
   </style>
 </head>
 <body>
 <h1>Live QSO-View</h1>
+    <p style="text-align: right;"><small>Generated with <a href="https://github.com/int2001/wavelog_stream">Wavelog-Stream</a> by DJ7NT</small></p>
     <table id="messagesTable">
         <thead>
             <tr>
@@ -44,6 +47,7 @@
             <!-- Rows will be dynamically added here -->
         </tbody>
     </table>
+    <br/>
 	<script type="text/javascript">
 	const base = document.querySelector('base');
 	if (base) {
