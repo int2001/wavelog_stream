@@ -121,7 +121,7 @@ function handle_mqtt(topic,message) {
 		} else {
 			// tobrowser=parse_cat_msg(topic,msg.content);
 			// io.emit("cat",tobrowser);				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
-			console.log(topic+' / CAT for User '+(msg.user_id || '')+' ('+msg.content.user_name+') at '+tobrowser.qrg+' in Mode '+tobrowser.mode);
+			console.log(topic+' / CAT for User '+(msg.content.user_id || '')+' ('+msg.content.user_name+') at '+tobrowser.qrg+' in Mode '+tobrowser.mode);
 		}
 	} else {
 		console.log(msg.content.user_name+' not in Whitelist');
