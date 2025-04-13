@@ -108,7 +108,7 @@ function handle_mqtt(topic,message) {
 			tobrowser=parse_qso_msg(msg.content);
 			if (tobrowser.qso_time) {
 				tobrowser.qso_age=dinmin(tobrowser.qso_time);
-				if (tobrowser.qso_age<=3600) {
+				if (tobrowser.qso_age<=10) {
 					emitobj=tobrowser;
 				}
 			} else {
@@ -116,7 +116,7 @@ function handle_mqtt(topic,message) {
 			}
 			console.log(topic+' / QSO from: '+tobrowser.station_call+' with '+tobrowser.call+' in Mode: '+tobrowser.mode+' at '+tobrowser.qso_time);
 		} else {
-			tobrowser=parse_cat_msg(topic,msg.content);
+			// tobrowser=parse_cat_msg(topic,msg.content);
 			// io.emit("cat",tobrowser);				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
 			console.log(topic+' / CAT for User '+tobrowser.user_id+' ('+msg.content.user_name+') at '+tobrowser.qrg+' in Mode '+tobrowser.mode);
 		}
