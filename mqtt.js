@@ -6,6 +6,7 @@ const path = require('path');
 const express = require('express');
 const app = express();		// http-express framework laden (macht routing, etc.)
 const http = require('http').Server(app);	// http-server module laden
+const fs = require('fs');
 var whitelist=[];
 
 
@@ -15,13 +16,65 @@ app.use((req, res, next) => {
 	next();
 });
 
-const io = require('socket.io')(http, {path: `${config.prefix}/socket.io`,});		// socket.io einbinden
+const io = require('socket.io')(http, {path: `${config.prefix}socket.io`,});		// socket.io einbinden
 
-app.use(config.prefix+'/jquery', express.static(path.join(__dirname, 'node_modules', 'jquery', 'dist')));
+app.use(config.prefix+'jquery', express.static(path.join(__dirname, 'node_modules', 'jquery', 'dist')));
 
-app.get(config.prefix+'/', (req, res) => {
-	res.sendFile(__dirname + '/index.html');
+app.get(config.prefix+'stream', (req, res) => {
+	serve(req,res);
 });
+
+app.get(config.prefix, (req, res) => {
+	if ((req.query.nojs || 0) == 1) {
+		let baseHTML = fs.readFileSync(path.join(__dirname, 'index_iframe.html'),'utf8');
+		res.writeHead(200, { 'Content-Type': 'text/html' });
+		if ((req.query.call || '') != '') {
+			call='?call='+req.query.call;
+		} else {
+			call='';
+		}
+		let newHTML=baseHTML.replace('%%prefix%%/',config.prefix).replace('%%suffix%%',call);
+		res.send(newHTML);
+	} else {
+		res.sendFile(__dirname + '/index.html');
+	}
+});
+
+
+function serve(req,res) {
+	res.writeHead(200, {
+      		'Transfer-Encoding': 'chunked',
+		'Content-Type': 'text/html',
+	});
+	const baseHTML = fs.readFileSync(path.join(__dirname, 'index_nojs.html'));
+	res.write(`${baseHTML}\n\n`);
+	res.write(``);
+
+	mqttC.on('message', function (topic, message) {	// Handler, wenn mqtt-message kommt
+		let tobrowser=handle_mqtt(topic,message);
+		if (((req.query.call || '') == '') || (tobrowser.station_call == req.query.call)) {
+			const eventData = `
+			<tr><td>${tobrowser.qso_time}</td>
+			<td>${tobrowser.station_call}</td>
+			<td>${tobrowser.station_grid}</td>
+			<td>${tobrowser.call}</td>
+			<td>${tobrowser.grid}</td>
+			<td>${tobrowser.band}</td>
+			<td>${tobrowser.qrg}</td>
+			<td>${tobrowser.mode}</td>
+			<td>${tobrowser.RST_RCVD}</td>
+			<td>${tobrowser.RST_SENT}</td>
+			</tr>
+			`;
+
+			res.write(`${eventData}\n\n`);
+		}
+	});
+
+	req.on('close', () => {
+		res.end();
+	});
+};
 
 const mqttC=mqtt.connect(mqttserver);
 mqttC.on('connect', () => {
@@ -36,7 +89,8 @@ mqttC.on('connect', () => {
 	});
 });
 
-mqttC.on('message', function (topic, message) {	// Handler, wenn mqtt-message kommt
+function handle_mqtt(topic,message) {
+	let emitobj={};
 	date=new Date();					// Timestamp in date merken
 	msg={};							// msg-object initialisieren
 	if (message.toString().substring(0,1)=='{') {		// JSON-String? Dann aufbereiten
@@ -54,8 +108,8 @@ mqttC.on('message', function (topic, message) {	// Handler, wenn mqtt-message ko
 			tobrowser=parse_qso_msg(msg.content);
 			if (tobrowser.qso_time) {
 				tobrowser.qso_age=dinmin(tobrowser.qso_time);
-				if (tobrowser.qso_age<=10) {
-					io.emit("mqtt",tobrowser);				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
+				if (tobrowser.qso_age<=3600) {
+					emitobj=tobrowser;
 				}
 			} else {
 				console.log("No Timestamp!");
@@ -69,6 +123,12 @@ mqttC.on('message', function (topic, message) {	// Handler, wenn mqtt-message ko
 	} else {
 		console.log(msg.content.user_name+' not in Whitelist');
 	}
+	return emitobj;
+};
+
+mqttC.on('message', function (topic, message) {	// Handler, wenn mqtt-message kommt
+	let tobrowser=handle_mqtt(topic,message);
+	io.emit("mqtt",tobrowser);				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
 });
 
 io.on('connection', (socket) => {	

@@ -49,8 +49,8 @@
 	if (base) {
 		base.href = window.location.pathname;
 	}
-	document.write(`<script src="${base.href}/jquery/jquery.min.js"><\/script>`);
-  	document.write(`<script src="${base.href}/socket.io/socket.io.js"><\/script>`);
+	document.write(`<script src="${base.href}jquery/jquery.min.js"><\/script>`);
+  	document.write(`<script src="${base.href}socket.io/socket.io.js"><\/script>`);
 	</script>
 	<script type="text/javascript" defer>
 		(function() {
@@ -60,7 +60,7 @@
 					const tableBody = document.getElementById('messagesTable').querySelector('tbody');
 					var lines = 0;
 					var buffer = $('#mqtt');
-					var socket = io.connect({ path: window.location.pathname+"/socket.io" }); // http://localhost:8000");
+					var socket = io.connect({ path: window.location.pathname+"socket.io" }); // http://localhost:8000");
 					socket.on('connect', function() {
 						console.log('Connected to:', socket.host);
 					});
