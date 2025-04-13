@@ -50,7 +50,7 @@ function serve(req,res) {
 	res.write(`${baseHTML}\n\n`);
 	res.write(``);
 
-	mqttC.on('message', function (topic, message) {	// Handler, wenn mqtt-message kommt
+	const msghandler = (topic, message) => {
 		let tobrowser=handle_mqtt(topic,message);
 		if (((req.query.call || '') == '') || (tobrowser.station_call == req.query.call)) {
 			const eventData = `
@@ -69,9 +69,12 @@ function serve(req,res) {
 
 			res.write(`${eventData}\n\n`);
 		}
-	});
+	};
+
+	mqttC.on('message', msghandler);
 
 	req.on('close', () => {
+		mqttC.removeListener('message', msghandler);
 		res.end();
 	});
 };
@@ -128,7 +131,9 @@ function handle_mqtt(topic,message) {
 
 mqttC.on('message', function (topic, message) {	// Handler, wenn mqtt-message kommt
 	let tobrowser=handle_mqtt(topic,message);
-	io.emit("mqtt",tobrowser);				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
+	if (tobrowser.call) {
+		io.emit("mqtt",tobrowser);				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
+	}
 });
 
 io.on('connection', (socket) => {	
