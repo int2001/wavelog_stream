@@ -1,4 +1,4 @@
-#!/usr/bin/env -S node 
+#!/usr/bin/env -S node
 const config = require("./config.js");		// Configfile einbinden
 var mqttserver=config.mqttserver.host;		// mqtt-host aus json im configfile holen (ginge auch direkt)
 var mqtt = require('mqtt');			// mqtt-module einbinden
@@ -8,6 +8,14 @@ const app = express();		// http-express framework laden (macht routing, etc.)
 const http = require('http').Server(app);	// http-server module laden
 const fs = require('fs');
 var whitelist=[];
+var qsoHistory = new Map();
+var qsoHistoryPath = config.qsoHistoryFile || "./qso_history.json";
+var saveTimeout = null;
+
+// Normalize prefix to always end with / (except for empty prefix)
+if (config.prefix && config.prefix !== '' && !config.prefix.endsWith('/')) {
+	config.prefix = config.prefix + '/';
+}
 
 
 app.use((req, res, next) => {
@@ -36,7 +44,9 @@ app.get(config.prefix, (req, res) => {
 		let newHTML=baseHTML.replace('%%prefix%%/',config.prefix).replace('%%suffix%%',call);
 		res.send(newHTML);
 	} else {
-		res.sendFile(__dirname + '/index.html');
+		let baseHTML = fs.readFileSync(path.join(__dirname, 'index.html'),'utf8');
+		let newHTML=baseHTML.replace(/%%prefix%%/g,config.prefix);
+		res.send(newHTML);
 	}
 });
 
@@ -114,6 +124,7 @@ function handle_mqtt(topic,message) {
 				if (tobrowser.qso_age<=10) {
 					emitobj=tobrowser;
 				}
+				addToHistory(tobrowser);
 			} else {
 				console.log("No Timestamp!");
 			}
@@ -136,9 +147,17 @@ mqttC.on('message', function (topic, message) {	// Handler, wenn mqtt-message ko
 	}
 });
 
-io.on('connection', (socket) => {	
+io.on('connection', (socket) => {
 	console.log(socket.id + " connected // total clients now: "+io.engine.clientsCount);
-	socket.on("disconnect", (reason) => {		
+
+	// Send full history to the new client
+	const allHistory = {};
+	for (const [call, qsos] of qsoHistory.entries()) {
+		allHistory[call] = qsos;
+	}
+	socket.emit('history', allHistory);
+
+	socket.on("disconnect", (reason) => {
 		console.log(socket.id + " disconnected // total clients now: "+io.engine.clientsCount);
 	});
 
@@ -184,10 +203,67 @@ function parse_qso_msg(msg) {
 }
 
 const dinmin = (timestamp) => {
-	return Math.floor((Date.now() - new Date(timestamp).getTime()) / 60000);
+	return Math.floor((Date.now() - new Date(timestamp + 'Z').getTime()) / 60000);
+}
+
+function loadQsoHistory() {
+	try {
+		if (fs.existsSync(qsoHistoryPath)) {
+			const data = fs.readFileSync(qsoHistoryPath, 'utf8');
+			const parsed = JSON.parse(data);
+			for (const [call, qsos] of Object.entries(parsed)) {
+				qsoHistory.set(call, qsos);
+			}
+			console.log(`Loaded QSO history for ${qsoHistory.size} calls`);
+		} else {
+			console.log('No QSO history file found, starting fresh');
+		}
+	} catch (e) {
+		console.log('Error loading QSO history:', e.message);
+	}
+}
+
+function saveQsoHistory() {
+	const obj = {};
+	for (const [call, qsos] of qsoHistory.entries()) {
+		obj[call] = qsos;
+	}
+	try {
+		fs.writeFileSync(qsoHistoryPath, JSON.stringify(obj, null, 2), 'utf8');
+	} catch (e) {
+		console.log('Error saving QSO history:', e.message);
+	}
+}
+
+function debouncedSaveQsoHistory() {
+	if (saveTimeout) {
+		clearTimeout(saveTimeout);
+	}
+	saveTimeout = setTimeout(() => {
+		saveQsoHistory();
+		saveTimeout = null;
+	}, 1000);
+}
+
+function addToHistory(qso) {
+	const call = qso.station_call;
+	if (!call) return;
+
+	let history = qsoHistory.get(call) || [];
+	history.unshift(qso);
+	if (history.length > 10) {
+		history = history.slice(0, 10);
+	}
+	qsoHistory.set(call, history);
+	debouncedSaveQsoHistory();
+}
+
+function getHistoryForCall(station_call) {
+	return qsoHistory.get(station_call) || [];
 }
 
 function startup() {
+	loadQsoHistory();
 	getWhitelist();
 	http.listen(config.webport,config.webbind, () => {						// Webserver starten
 		console.log(`Socket.IO server running at http://${config.webbind}:${config.webport}`);	// debug

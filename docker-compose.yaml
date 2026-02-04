@@ -7,4 +7,5 @@ services:
       - 8000:8000
     volumes:
       - ./config.js:/usr/src/app/config.js:U
+      - ./qso_history.json:/usr/src/app/qso_history.json
     restart: unless-stopped
