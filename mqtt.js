@@ -55,8 +55,9 @@ const streamClients = new Set();
 
 function serve(req,res) {
 	res.writeHead(200, {
-      		'Transfer-Encoding': 'chunked',
-		'Content-Type': 'text/html',
+		'Content-Type': 'text/html; charset=utf-8',
+		'Cache-Control': 'no-cache, no-store, must-revalidate',
+		'X-Accel-Buffering': 'no',
 	});
 	const baseHTML = fs.readFileSync(path.join(__dirname, 'index_nojs.html'));
 	res.write(`${baseHTML}\n\n`);
@@ -64,7 +65,7 @@ function serve(req,res) {
 	// Write history rows (newest first, matching socket.io history behavior)
 	for (const [stationCall, qsos] of qsoHistory.entries()) {
 		if (((req.query.call || '') == '') || (stationCall == req.query.call)) {
-			for (let i = 0; i < qsos.length; i++) {
+			for (let i = qsos.length - 1; i >= 0; i--) {
 				const h = qsos[i];
 				const histRow = `
 			<tr><td>${h.qso_time}</td>
@@ -84,8 +85,6 @@ function serve(req,res) {
 		}
 	}
 
-	res.write(``);
-
 	const sendToClient = (tobrowser) => {
 		if (((tobrowser.station_call || '') != '') && (((req.query.call || '') == '') || (tobrowser.station_call == req.query.call))) {
 			const eventData = `
@@ -101,8 +100,11 @@ function serve(req,res) {
 			<td>${tobrowser.RST_SENT}</td>
 			</tr>
 			`;
-
-			res.write(`${eventData}\n\n`);
+			try {
+				res.write(`${eventData}\n\n`);
+			} catch (e) {
+				streamClients.delete(sendToClient);
+			}
 		}
 	};
 
