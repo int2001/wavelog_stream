@@ -25,6 +25,8 @@ COPY . .
 FROM base AS release
 COPY --from=install /temp/prod/node_modules node_modules
 COPY --from=prerelease /usr/src/app/mqtt.js .
+# create empty history file with correct permissions
+RUN touch qso_history.json && chmod 666 qso_history.json
 COPY --from=prerelease /usr/src/app/package.json .
 COPY --from=prerelease /usr/src/app/index.html .
 COPY --from=prerelease /usr/src/app/index_iframe.html .
