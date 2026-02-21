@@ -60,6 +60,30 @@ function serve(req,res) {
 	});
 	const baseHTML = fs.readFileSync(path.join(__dirname, 'index_nojs.html'));
 	res.write(`${baseHTML}\n\n`);
+
+	// Write history rows (newest first, matching socket.io history behavior)
+	for (const [stationCall, qsos] of qsoHistory.entries()) {
+		if (((req.query.call || '') == '') || (stationCall == req.query.call)) {
+			for (let i = 0; i < qsos.length; i++) {
+				const h = qsos[i];
+				const histRow = `
+			<tr><td>${h.qso_time}</td>
+			<td>${h.station_call}</td>
+			<td>${h.station_grid}</td>
+			<td>${h.call}</td>
+			<td>${h.grid}</td>
+			<td>${h.band}</td>
+			<td>${h.qrg}</td>
+			<td>${h.mode}</td>
+			<td>${h.RST_RCVD}</td>
+			<td>${h.RST_SENT}</td>
+			</tr>
+			`;
+				res.write(`${histRow}\n\n`);
+			}
+		}
+	}
+
 	res.write(``);
 
 	const sendToClient = (tobrowser) => {
