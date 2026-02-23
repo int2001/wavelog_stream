@@ -62,27 +62,33 @@ function serve(req,res) {
 	const baseHTML = fs.readFileSync(path.join(__dirname, 'index_nojs.html'));
 	res.write(`${baseHTML}\n\n`);
 
-	// Write history rows (newest first, matching socket.io history behavior)
+	// Flatten all QSOs into a single array and sort by time descending
+	const allQsos = [];
 	for (const [stationCall, qsos] of qsoHistory.entries()) {
 		if (((req.query.call || '') == '') || (stationCall == req.query.call)) {
-			for (let i = qsos.length - 1; i >= 0; i--) {
-				const h = qsos[i];
-				const histRow = `
-			<tr><td>${h.qso_time}</td>
-			<td>${h.station_call}</td>
-			<td>${h.station_grid}</td>
-			<td>${h.call}</td>
-			<td>${h.grid}</td>
-			<td>${h.band}</td>
-			<td>${h.qrg}</td>
-			<td>${h.mode}</td>
-			<td>${h.RST_RCVD}</td>
-			<td>${h.RST_SENT}</td>
-			</tr>
-			`;
-				res.write(`${histRow}\n\n`);
+			for (const qso of qsos) {
+				allQsos.push(qso);
 			}
 		}
+	}
+	allQsos.sort((a, b) => b.qso_time.localeCompare(a.qso_time));
+
+	// Write history rows (newest first)
+	for (const h of allQsos) {
+		const histRow = `
+		<tr><td>${h.qso_time}</td>
+		<td>${h.station_call}</td>
+		<td>${h.station_grid}</td>
+		<td>${h.call}</td>
+		<td>${h.grid}</td>
+		<td>${h.band}</td>
+		<td>${h.qrg}</td>
+		<td>${h.mode}</td>
+		<td>${h.RST_RCVD}</td>
+		<td>${h.RST_SENT}</td>
+		</tr>
+		`;
+		res.write(`${histRow}\n\n`);
 	}
 
 	const sendToClient = (tobrowser) => {
@@ -242,7 +248,10 @@ function loadQsoHistory() {
 			const data = fs.readFileSync(qsoHistoryPath, 'utf8');
 			const parsed = JSON.parse(data);
 			for (const [call, qsos] of Object.entries(parsed)) {
-				qsoHistory.set(call, qsos);
+				// Only load valid array entries
+				if (Array.isArray(qsos)) {
+					qsoHistory.set(call, qsos);
+				}
 			}
 			console.log(`Loaded QSO history for ${qsoHistory.size} calls`);
 		} else {
@@ -275,15 +284,43 @@ function debouncedSaveQsoHistory() {
 	}, 1000);
 }
 
+function cleanOldQsos() {
+	const oneHourAgo = Date.now() - 60 * 60 * 1000;
+	let cleaned = 0;
+
+	for (const [call, qsos] of qsoHistory.entries()) {
+		// Skip non-array entries (corrupted data)
+		if (!Array.isArray(qsos)) {
+			qsoHistory.delete(call);
+			cleaned++;
+			continue;
+		}
+		const filtered = qsos.filter(qso => {
+			const qsoTime = new Date(qso.qso_time + 'Z').getTime();
+			return qsoTime > oneHourAgo;
+		});
+		if (filtered.length !== qsos.length) {
+			cleaned += qsos.length - filtered.length;
+			if (filtered.length === 0) {
+				qsoHistory.delete(call);
+			} else {
+				qsoHistory.set(call, filtered);
+			}
+		}
+	}
+
+	if (cleaned > 0) {
+		console.log(`Cleaned ${cleaned} QSOs older than 1 hour`);
+		debouncedSaveQsoHistory();
+	}
+}
+
 function addToHistory(qso) {
 	const call = qso.station_call;
 	if (!call) return;
 
 	let history = qsoHistory.get(call) || [];
 	history.unshift(qso);
-	if (history.length > 10) {
-		history = history.slice(0, 10);
-	}
 	qsoHistory.set(call, history);
 	debouncedSaveQsoHistory();
 }
@@ -294,11 +331,13 @@ function getHistoryForCall(station_call) {
 
 function startup() {
 	loadQsoHistory();
+	cleanOldQsos();
 	getWhitelist();
 	http.listen(config.webport,config.webbind, () => {						// Webserver starten
 		console.log(`Socket.IO server running at http://${config.webbind}:${config.webport}`);	// debug
 	});
 	const intervalID = setInterval(getWhitelist,5*60*1000);
+	setInterval(cleanOldQsos, 60 * 1000); // Clean old QSOs every minute
 }
 
 startup();
