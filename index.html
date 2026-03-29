@@ -52,6 +52,9 @@
 	document.write(`<script src="%%prefix%%jquery/jquery.min.js"><\/script>`);
   	document.write(`<script src="%%prefix%%socket.io/socket.io.js"><\/script>`);
 	</script>
+	<script type="text/javascript">
+		const showTime = %%showTime%%;
+	</script>
 	<script type="text/javascript" defer>
 		(function() {
 					const queryString = window.location.search;
@@ -160,6 +163,9 @@
 					});
 				})();
 		function tsclean(timestamp) {
+			if (!showTime) {
+				return timestamp.split(' ')[0];
+			}
 			const parts = timestamp.split(':');
 			if (parts.length === 2) {
 				return `${timestamp}:00`;

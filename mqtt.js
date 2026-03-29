@@ -45,7 +45,7 @@ app.get(config.prefix, (req, res) => {
 		res.send(newHTML);
 	} else {
 		let baseHTML = fs.readFileSync(path.join(__dirname, 'index.html'),'utf8');
-		let newHTML=baseHTML.replace(/%%prefix%%/g,config.prefix);
+		let newHTML=baseHTML.replace(/%%prefix%%/g,config.prefix).replace('%%showTime%%', config.showTime === false ? 'false' : 'true');
 		res.send(newHTML);
 	}
 });
@@ -76,7 +76,7 @@ function serve(req,res) {
 	// Write history rows (newest first)
 	for (const h of allQsos) {
 		const histRow = `
-		<tr><td>${h.qso_time}</td>
+		<tr><td>${formatQsoTime(h.qso_time)}</td>
 		<td>${h.station_call}</td>
 		<td>${h.station_grid}</td>
 		<td>${h.call}</td>
@@ -94,7 +94,7 @@ function serve(req,res) {
 	const sendToClient = (tobrowser) => {
 		if (((tobrowser.station_call || '') != '') && (((req.query.call || '') == '') || (tobrowser.station_call == req.query.call))) {
 			const eventData = `
-			<tr><td>${tobrowser.qso_time}</td>
+			<tr><td>${formatQsoTime(tobrowser.qso_time)}</td>
 			<td>${tobrowser.station_call}</td>
 			<td>${tobrowser.station_grid}</td>
 			<td>${tobrowser.call}</td>
@@ -153,11 +153,15 @@ function handle_mqtt(topic,message) {
 		if (topic.startsWith('wavelog/qso/logged')) {
 			const tobrowser=parse_qso_msg(msg.content);
 			if (tobrowser.qso_time) {
-				tobrowser.qso_age=dinmin(tobrowser.qso_time);
-				if (tobrowser.qso_age<=10) {
-					emitobj=tobrowser;
+				if (isFarFuture(tobrowser.qso_time)) {
+					console.log("Skipping QSO with timestamp far in future: "+tobrowser.qso_time);
+				} else {
+					tobrowser.qso_age=dinmin(tobrowser.qso_time);
+					if (tobrowser.qso_age<=10) {
+						emitobj=tobrowser;
+					}
+					addToHistory(tobrowser);
 				}
-				addToHistory(tobrowser);
 			} else {
 				console.log("No Timestamp!");
 			}
@@ -242,6 +246,14 @@ const dinmin = (timestamp) => {
 	return Math.floor((Date.now() - new Date(timestamp + 'Z').getTime()) / 60000);
 }
 
+const isFarFuture = (timestamp) => {
+	return new Date(timestamp + 'Z').getTime() > Date.now() + 4 * 60 * 60 * 1000;
+}
+
+const formatQsoTime = (ts) => {
+	return config.showTime === false ? ts.split(' ')[0] : ts;
+}
+
 function loadQsoHistory() {
 	try {
 		if (fs.existsSync(qsoHistoryPath)) {
@@ -250,7 +262,14 @@ function loadQsoHistory() {
 			for (const [call, qsos] of Object.entries(parsed)) {
 				// Only load valid array entries
 				if (Array.isArray(qsos)) {
-					qsoHistory.set(call, qsos);
+					const filtered = qsos.filter(qso => !isFarFuture(qso.qso_time));
+					const dropped = qsos.length - filtered.length;
+					if (dropped > 0) {
+						console.log(`Dropped ${dropped} future QSOs for ${call} during load`);
+					}
+					if (filtered.length > 0) {
+						qsoHistory.set(call, filtered);
+					}
 				}
 			}
 			console.log(`Loaded QSO history for ${qsoHistory.size} calls`);
@@ -297,7 +316,7 @@ function cleanOldQsos() {
 		}
 		const filtered = qsos.filter(qso => {
 			const qsoTime = new Date(qso.qso_time + 'Z').getTime();
-			return qsoTime > oneHourAgo;
+			return qsoTime > oneHourAgo && !isFarFuture(qso.qso_time);
 		});
 		if (filtered.length !== qsos.length) {
 			cleaned += qsos.length - filtered.length;
