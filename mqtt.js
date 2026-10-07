@@ -9,6 +9,9 @@ const http = require('http').Server(app);	// http-server module laden
 const fs = require('fs');
 var whitelist=[];
 
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+console.assert(esc('<s>') === '&lt;s&gt;', 'esc broken');
+
 
 app.use((req, res, next) => {
 	res.append('Content-Security-Policy', 'sandbox allow-scripts allow-same-origin');
@@ -29,7 +32,7 @@ app.get(config.prefix, (req, res) => {
 		let baseHTML = fs.readFileSync(path.join(__dirname, 'index_iframe.html'),'utf8');
 		res.writeHead(200, { 'Content-Type': 'text/html' });
 		if ((req.query.call || '') != '') {
-			call='?call='+req.query.call;
+			call='?call='+encodeURIComponent(req.query.call);
 		} else {
 			call='';
 		}
@@ -54,16 +57,16 @@ function serve(req,res) {
 		let tobrowser=handle_mqtt(topic,message);
 		if (((tobrowser.station_call || '') != '') && (((req.query.call || '') == '') || (tobrowser.station_call == req.query.call))) {
 			const eventData = `
-			<tr><td>${tobrowser.qso_time}</td>
-			<td>${tobrowser.station_call}</td>
-			<td>${tobrowser.station_grid}</td>
-			<td>${tobrowser.call}</td>
-			<td>${tobrowser.grid}</td>
-			<td>${tobrowser.band}</td>
-			<td>${tobrowser.qrg}</td>
-			<td>${tobrowser.mode}</td>
-			<td>${tobrowser.RST_RCVD}</td>
-			<td>${tobrowser.RST_SENT}</td>
+			<tr><td>${esc(tobrowser.qso_time)}</td>
+			<td>${esc(tobrowser.station_call)}</td>
+			<td>${esc(tobrowser.station_grid)}</td>
+			<td>${esc(tobrowser.call)}</td>
+			<td>${esc(tobrowser.grid)}</td>
+			<td>${esc(tobrowser.band)}</td>
+			<td>${esc(tobrowser.qrg)}</td>
+			<td>${esc(tobrowser.mode)}</td>
+			<td>${esc(tobrowser.RST_RCVD)}</td>
+			<td>${esc(tobrowser.RST_SENT)}</td>
 			</tr>
 			`;
 
@@ -94,6 +97,7 @@ mqttC.on('connect', () => {
 
 function handle_mqtt(topic,message) {
 	let emitobj={};
+	let tobrowser;
 	date=new Date();					// Timestamp in date merken
 	msg={};							// msg-object initialisieren
 	if (message.toString().substring(0,1)=='{') {		// JSON-String? Dann aufbereiten
@@ -121,7 +125,7 @@ function handle_mqtt(topic,message) {
 		} else {
 			// tobrowser=parse_cat_msg(topic,msg.content);
 			// io.emit("cat",tobrowser);				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
-			console.log(topic+' / CAT for User '+(msg.content.user_id || '')+' ('+msg.content.user_name+') at '+tobrowser.qrg+' in Mode '+tobrowser.mode);
+			console.log(topic+' / CAT for User '+(msg.content.user_id || '')+' ('+(msg.content.user_name || '')+')');
 		}
 	} else {
 		console.log(msg.content.user_name+' not in Whitelist');
