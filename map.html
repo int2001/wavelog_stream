@@ -13,6 +13,8 @@
     #legend { position:absolute; bottom:10px; right:10px; z-index:1000; background:#fff; padding:4px 8px; border:1px solid #ddd; font-family:sans-serif; font-size:12px; }
     .bandentry { cursor:pointer; user-select:none; }
     .bandentry.off { opacity:.35; text-decoration:line-through; }
+    @keyframes flashqso { 50% { opacity:.1 } }
+    .flashqso { animation: flashqso .5s linear 6; }
   </style>
 </head>
 <body>
@@ -90,7 +92,7 @@
         Math.cos(f1)*Math.sin(f2)-Math.sin(f1)*Math.cos(f2)*Math.cos(dl)) * 180/Math.PI;
     };
 
-    function drawQso(q) {
+    function drawQso(q, flash) {
       const from = gridToLatLon(q.station_grid);
       const to = gridToLatLon(q.grid);
       if (!from || !to) return;
@@ -103,6 +105,7 @@
           interactive:false
         })
       ]).addTo(map);
+      if (flash) for (const l of group.getLayers()) { const el = l.getElement(); if (el) el.classList.add('flashqso'); }
       drawn.push({group: group, time: q.qso_time, band: q.band});
       while (drawn.length > MAX_QSOS) fadeOut(drawn.shift().group);
     }
@@ -126,7 +129,7 @@
     function onQso(q) {
       if (filter !== '' && filter !== q.station_call) return;
       cacheAdd(q);
-      if (passesFilters(q)) { drawQso(q); updateLegend(); }
+      if (passesFilters(q)) { drawQso(q, true); updateLegend(); }
     }
 
     // ---- band filter checkboxes (dynamic) ----

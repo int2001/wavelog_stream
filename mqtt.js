@@ -28,7 +28,6 @@ app.use((req, res, next) => {
 
 const io = require('socket.io')(http, {path: `${config.prefix}socket.io`,});		// socket.io einbinden
 
-app.use(config.prefix+'jquery', express.static(path.join(__dirname, 'node_modules', 'jquery', 'dist')));
 app.use(config.prefix+'leaflet', express.static(path.join(__dirname, 'node_modules', 'leaflet', 'dist')));
 
 app.get(config.prefix+'map', (req, res) => {
@@ -67,8 +66,9 @@ function serve(req,res) {
 		'Content-Type': 'text/html; charset=utf-8',
 		'Cache-Control': 'no-cache, no-store, must-revalidate',
 		'X-Accel-Buffering': 'no',
+		'Content-Security-Policy': 'sandbox allow-scripts allow-same-origin',
 	});
-	const baseHTML = fs.readFileSync(path.join(__dirname, 'index_nojs.html'));
+	const baseHTML = fs.readFileSync(path.join(__dirname, 'index_nojs.html'), 'utf8').replace(/%%prefix%%/g, config.prefix);
 	res.write(`${baseHTML}\n\n`);
 
 	// Flatten all QSOs into a single array and sort by time descending
@@ -178,8 +178,6 @@ function handle_mqtt(topic,message) {
 				console.log(topic+' / QSO from: '+tobrowser.station_call+' with '+tobrowser.call+' in Mode: '+tobrowser.mode+' at '+tobrowser.qso_time);
 			}
 		} else {
-			// tobrowser=parse_cat_msg(topic,msg.content);
-			// io.emit("cat",tobrowser);				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
 			console.log(topic+' / CAT for User '+(msg.content?.user_id || '')+' ('+userName+') at '+(msg.content?.frequency)+' in Mode '+(msg.content?.mode));
 		}
 	} else {
@@ -326,7 +324,7 @@ function cleanOldQsos() {
 		}
 		const filtered = qsos.filter(qso => {
 			const qsoTime = parseTs(qso.qso_time);
-			return qsoTime === null || (qsoTime > oneHourAgo && !isFarFuture(qso.qso_time));
+			return qsoTime !== null && qsoTime > oneHourAgo && !isFarFuture(qso.qso_time);
 		});
 		if (filtered.length !== qsos.length) {
 			cleaned += qsos.length - filtered.length;
@@ -362,7 +360,7 @@ function startup() {
 	http.listen(config.webport,config.webbind, () => {						// Webserver starten
 		console.log(`Socket.IO server running at http://${config.webbind}:${config.webport}`);	// debug
 	});
-	const intervalID = setInterval(getWhitelist,5*60*1000);
+	setInterval(getWhitelist,5*60*1000);
 	setInterval(cleanOldQsos, 60 * 1000); // Clean old QSOs every minute
 }
 
