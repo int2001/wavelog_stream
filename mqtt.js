@@ -7,7 +7,7 @@ const express = require('express');
 const app = express();		// http-express framework laden (macht routing, etc.)
 const http = require('http').Server(app);	// http-server module laden
 const fs = require('fs');
-var whitelist=[];
+var whitelist={whitelist: []};
 var qsoHistory = new Map();
 var qsoHistoryPath = config.qsoHistoryFile || "./qso_history.json";
 var saveTimeout = null;
@@ -20,7 +20,6 @@ if (config.prefix && config.prefix !== '' && !config.prefix.endsWith('/')) {
 
 app.use((req, res, next) => {
 	res.append('Content-Security-Policy', 'sandbox allow-scripts allow-same-origin');
-	res.append('x-frame-options', 'ALLOWALL');
 	next();
 });
 
@@ -35,11 +34,9 @@ app.get(config.prefix+'stream', (req, res) => {
 app.get(config.prefix, (req, res) => {
 	if ((req.query.nojs || 0) == 1) {
 		let baseHTML = fs.readFileSync(path.join(__dirname, 'index_iframe.html'),'utf8');
-		res.writeHead(200, { 'Content-Type': 'text/html' });
+		let call = '';
 		if ((req.query.call || '') != '') {
-			call='?call='+req.query.call;
-		} else {
-			call='';
+			call='?call='+encodeURIComponent(req.query.call);
 		}
 		let newHTML=baseHTML.replace('%%prefix%%/',config.prefix).replace('%%suffix%%',call);
 		res.send(newHTML);
@@ -52,6 +49,8 @@ app.get(config.prefix, (req, res) => {
 
 
 const streamClients = new Set();
+
+const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
 function serve(req,res) {
 	res.writeHead(200, {
@@ -76,16 +75,16 @@ function serve(req,res) {
 	// Write history rows (newest first)
 	for (const h of allQsos) {
 		const histRow = `
-		<tr><td>${formatQsoTime(h.qso_time)}</td>
-		<td>${h.station_call}</td>
-		<td>${h.station_grid}</td>
-		<td>${h.call}</td>
-		<td>${h.grid}</td>
-		<td>${h.band}</td>
-		<td>${h.qrg}</td>
-		<td>${h.mode}</td>
-		<td>${h.RST_RCVD}</td>
-		<td>${h.RST_SENT}</td>
+		<tr><td>${esc(formatQsoTime(h.qso_time))}</td>
+		<td>${esc(h.station_call)}</td>
+		<td>${esc(h.station_grid)}</td>
+		<td>${esc(h.call)}</td>
+		<td>${esc(h.grid)}</td>
+		<td>${esc(h.band)}</td>
+		<td>${esc(h.qrg)}</td>
+		<td>${esc(h.mode)}</td>
+		<td>${esc(h.RST_RCVD)}</td>
+		<td>${esc(h.RST_SENT)}</td>
 		</tr>
 		`;
 		res.write(`${histRow}\n\n`);
@@ -94,16 +93,16 @@ function serve(req,res) {
 	const sendToClient = (tobrowser) => {
 		if (((tobrowser.station_call || '') != '') && (((req.query.call || '') == '') || (tobrowser.station_call == req.query.call))) {
 			const eventData = `
-			<tr><td>${formatQsoTime(tobrowser.qso_time)}</td>
-			<td>${tobrowser.station_call}</td>
-			<td>${tobrowser.station_grid}</td>
-			<td>${tobrowser.call}</td>
-			<td>${tobrowser.grid}</td>
-			<td>${tobrowser.band}</td>
-			<td>${tobrowser.qrg}</td>
-			<td>${tobrowser.mode}</td>
-			<td>${tobrowser.RST_RCVD}</td>
-			<td>${tobrowser.RST_SENT}</td>
+			<tr><td>${esc(formatQsoTime(tobrowser.qso_time))}</td>
+			<td>${esc(tobrowser.station_call)}</td>
+			<td>${esc(tobrowser.station_grid)}</td>
+			<td>${esc(tobrowser.call)}</td>
+			<td>${esc(tobrowser.grid)}</td>
+			<td>${esc(tobrowser.band)}</td>
+			<td>${esc(tobrowser.qrg)}</td>
+			<td>${esc(tobrowser.mode)}</td>
+			<td>${esc(tobrowser.RST_RCVD)}</td>
+			<td>${esc(tobrowser.RST_SENT)}</td>
 			</tr>
 			`;
 			try {
@@ -149,7 +148,9 @@ function handle_mqtt(topic,message) {
 	} else {
 		msg.content=message.toString();			// Ist nix json? dann ab in "content" damit
 	}
-	if (!(config.whitelist_enabled) || (whitelist.whitelist.includes(msg.content.user_name))) {
+	const userName = msg.content?.user_name;
+	const wlist = (whitelist && whitelist.whitelist) || [];
+	if (!(config.whitelist_enabled) || (wlist.includes(userName))) {
 		if (topic.startsWith('wavelog/qso/logged')) {
 			const tobrowser=parse_qso_msg(msg.content);
 			if (tobrowser.qso_time) {
@@ -169,10 +170,10 @@ function handle_mqtt(topic,message) {
 		} else {
 			// tobrowser=parse_cat_msg(topic,msg.content);
 			// io.emit("cat",tobrowser);				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
-			console.log(topic+' / CAT for User '+(msg.content.user_id || '')+' ('+msg.content.user_name+') at '+msg.content.frequency+' in Mode '+msg.content.mode);
+			console.log(topic+' / CAT for User '+(msg.content?.user_id || '')+' ('+userName+') at '+(msg.content?.frequency)+' in Mode '+(msg.content?.mode));
 		}
 	} else {
-		console.log(msg.content.user_name+' not in Whitelist');
+		console.log(userName+' not in Whitelist');
 	}
 	return emitobj;
 };
@@ -202,15 +203,6 @@ io.on('connection', (socket) => {
 	});
 
 });
-
-function parse_cat_msg(topic,msg) {
-	let retmsg={};
-	retmsg.user_id=topic.substring(topic.lastIndexOf('/') + 1)
-	retmsg.qrg=msg.frequency;
-	retmsg.mode=msg.mode;
-	retmsg.time=msg.timestamp;
-	return retmsg;
-}
 
 async function getWhitelist() {
 	if (config.whitelist_enabled) {
@@ -242,12 +234,19 @@ function parse_qso_msg(msg) {
 	return retmsg;
 }
 
+const parseTs = (timestamp) => {
+	const t = new Date(timestamp + 'Z').getTime();
+	return Number.isNaN(t) ? null : t;
+}
+
 const dinmin = (timestamp) => {
-	return Math.floor((Date.now() - new Date(timestamp + 'Z').getTime()) / 60000);
+	const t = parseTs(timestamp);
+	return t === null ? -Infinity : Math.floor((Date.now() - t) / 60000);
 }
 
 const isFarFuture = (timestamp) => {
-	return new Date(timestamp + 'Z').getTime() > Date.now() + 4 * 60 * 60 * 1000;
+	const t = parseTs(timestamp);
+	return t !== null && t > Date.now() + 4 * 60 * 60 * 1000;
 }
 
 const formatQsoTime = (ts) => {
@@ -262,7 +261,7 @@ function loadQsoHistory() {
 			for (const [call, qsos] of Object.entries(parsed)) {
 				// Only load valid array entries
 				if (Array.isArray(qsos)) {
-					const filtered = qsos.filter(qso => !isFarFuture(qso.qso_time));
+					const filtered = qsos.filter(qso => qso.qso_time && !isFarFuture(qso.qso_time));
 					const dropped = qsos.length - filtered.length;
 					if (dropped > 0) {
 						console.log(`Dropped ${dropped} future QSOs for ${call} during load`);
@@ -315,8 +314,8 @@ function cleanOldQsos() {
 			continue;
 		}
 		const filtered = qsos.filter(qso => {
-			const qsoTime = new Date(qso.qso_time + 'Z').getTime();
-			return qsoTime > oneHourAgo && !isFarFuture(qso.qso_time);
+			const qsoTime = parseTs(qso.qso_time);
+			return qsoTime === null || (qsoTime > oneHourAgo && !isFarFuture(qso.qso_time));
 		});
 		if (filtered.length !== qsos.length) {
 			cleaned += qsos.length - filtered.length;
@@ -339,13 +338,10 @@ function addToHistory(qso) {
 	if (!call) return;
 
 	let history = qsoHistory.get(call) || [];
+	if (history.some(q => q.call === qso.call && q.qso_time === qso.qso_time)) return;
 	history.unshift(qso);
 	qsoHistory.set(call, history);
 	debouncedSaveQsoHistory();
-}
-
-function getHistoryForCall(station_call) {
-	return qsoHistory.get(station_call) || [];
 }
 
 function startup() {

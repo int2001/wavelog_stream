@@ -1,8 +1,6 @@
 {
   "dependencies": {
-    "dateformat": "",
     "express": "",
-    "http": "",
     "jquery": "^3.7.1",
     "mqtt": "",
     "socket.io": ""

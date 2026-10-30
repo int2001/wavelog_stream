@@ -1,4 +1,3 @@
-version: '3'
 services:
   liveqso:
     build: https://github.com/int2001/wavelog_stream.git#dev

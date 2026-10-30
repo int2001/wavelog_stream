@@ -1,3 +1,5 @@
 node_modules/
 config.js
 yarn.lock
+qso_history.json
+.DS_Store
