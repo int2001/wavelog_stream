@@ -26,6 +26,13 @@ app.use((req, res, next) => {
 const io = require('socket.io')(http, {path: `${config.prefix}socket.io`,});		// socket.io einbinden
 
 app.use(config.prefix+'jquery', express.static(path.join(__dirname, 'node_modules', 'jquery', 'dist')));
+app.use(config.prefix+'leaflet', express.static(path.join(__dirname, 'node_modules', 'leaflet', 'dist')));
+
+app.get(config.prefix+'map', (req, res) => {
+	let baseHTML = fs.readFileSync(path.join(__dirname, 'map.html'),'utf8');
+	let newHTML = baseHTML.replace(/%%prefix%%/g, config.prefix);
+	res.send(newHTML);
+});
 
 app.get(config.prefix+'stream', (req, res) => {
 	serve(req,res);

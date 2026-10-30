@@ -2,6 +2,7 @@
   "dependencies": {
     "express": "",
     "jquery": "^3.7.1",
+    "leaflet": "^1.9.4",
     "mqtt": "",
     "socket.io": ""
   },

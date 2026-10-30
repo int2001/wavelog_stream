@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="%%prefix%%">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <link rel="stylesheet" href="%%prefix%%leaflet/leaflet.css" />
+  <style type="text/css">
+    html, body { height: 100%; margin: 0; }
+    #map { height: 100%; }
+    #topbar { position:absolute; top:0; left:0; right:0; z-index:1000; background:#fff; padding:4px 8px; border-bottom:1px solid #ddd; font-family: sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="topbar"><a href="%%prefix%%">&larr; Table</a></div>
+  <div id="map"></div>
+  <script src="%%prefix%%socket.io/socket.io.js"></script>
+  <script src="%%prefix%%leaflet/leaflet.js"></script>
+  <script type="text/javascript">
+  (function() {
+    const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const filter = new URLSearchParams(window.location.search).get('call') || '';
+
+    const map = L.map('map').setView([40, 10], 4);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // Maidenhead 4/6-char grid -> [lat, lon] of square center, null if unparsable
+    function gridToLatLon(grid) {
+      if (typeof grid !== 'string' || !/^[A-Ra-r]{2}[0-9]{2}([A-Xa-x]{2})?$/.test(grid.trim())) return null;
+      const g = grid.trim().toUpperCase();
+      const lon = -180 + (g.charCodeAt(0)-65)*20 + (g.charCodeAt(2)-48)*2 + (g.length > 4 ? (g.charCodeAt(4)-65)*2/24 + 1/24 : 1);
+      const lat = -90 + (g.charCodeAt(1)-65)*10 + (g.charCodeAt(3)-48) + (g.length > 4 ? (g.charCodeAt(5)-65)/24 + 1/48 : 0.5);
+      return [lat, lon];
+    }
+
+    const drawn = [];   // [{group, time}], kept time-ordered
+    const MAX_QSOS = 100;
+
+    function fadeOut(group) {
+      group.eachLayer(l => { const el = l.getElement(); if (el) { el.style.transition = 'opacity 1s'; el.style.opacity = '0'; } });
+      setTimeout(() => map.removeLayer(group), 1000);
+    }
+
+    function drawQso(q) {
+      if (filter !== '' && filter !== q.station_call) return;
+      const from = gridToLatLon(q.station_grid);
+      const to = gridToLatLon(q.grid);
+      if (!from || !to) return;
+      const popup = esc(q.qso_time) + '<br>' + esc(q.station_call) + ' &rarr; ' + esc(q.call) + '<br>' + esc(q.band) + ' ' + esc(q.mode);
+      const group = L.layerGroup([
+        L.polyline([from, to], {color:'#0078ff', weight:2, opacity:0.8}).bindPopup(popup),
+        L.circleMarker(from, {radius:5, color:'#0078ff', fillOpacity:0.9}).bindPopup(popup),
+        L.circleMarker(to, {radius:5, color:'#ff0099', fillOpacity:0.9}).bindPopup(popup)
+      ]).addTo(map);
+      drawn.push({group: group, time: q.qso_time});
+      while (drawn.length > MAX_QSOS) fadeOut(drawn.shift().group);
+    }
+
+    const socket = io.connect({ path: "%%prefix%%socket.io" });
+    socket.on('history', function(historyData) {
+      const all = [];
+      for (const [stationCall, qsos] of Object.entries(historyData)) {
+        if (filter === '' || filter === stationCall) all.push(...qsos);
+      }
+      all.sort((a, b) => b.qso_time.localeCompare(a.qso_time));
+      for (const q of all.slice(0, MAX_QSOS)) drawQso(q);
+    });
+    socket.on('mqtt', drawQso);
+  })();
+  </script>
+</body>
+</html>
