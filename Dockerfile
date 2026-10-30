@@ -1,18 +1,18 @@
 # use the official Bun image
 # see all versions at https://hub.docker.com/r/oven/bun/tags
-FROM oven/bun:1 as base
+FROM oven/bun:1 AS base
 WORKDIR /usr/src/app
 
 # install dependencies into temp directory
 # this will cache them and speed up future builds
 FROM base AS install
 RUN mkdir -p /temp/dev
-COPY package.json bun.lockb /temp/dev/
+COPY package.json bun.lock /temp/dev/
 RUN cd /temp/dev && bun install --frozen-lockfile
 
 # install with --production (exclude devDependencies)
 RUN mkdir -p /temp/prod
-COPY package.json bun.lockb /temp/prod/
+COPY package.json bun.lock /temp/prod/
 RUN cd /temp/prod && bun install --frozen-lockfile --production
 
 # copy node_modules from temp directory
@@ -25,10 +25,14 @@ COPY . .
 FROM base AS release
 COPY --from=install /temp/prod/node_modules node_modules
 COPY --from=prerelease /usr/src/app/mqtt.js .
+# create empty history file with correct permissions
+RUN touch qso_history.json && chmod 666 qso_history.json
 COPY --from=prerelease /usr/src/app/package.json .
 COPY --from=prerelease /usr/src/app/index.html .
 COPY --from=prerelease /usr/src/app/index_iframe.html .
 COPY --from=prerelease /usr/src/app/index_nojs.html .
+COPY --from=prerelease /usr/src/app/map.html .
+COPY --from=prerelease /usr/src/app/style.css .
 
 # run the app
 USER bun

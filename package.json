@@ -1,11 +1,9 @@
 {
   "dependencies": {
-    "dateformat": "",
-    "express": "",
-    "http": "",
-    "jquery": "^3.7.1",
-    "mqtt": "",
-    "socket.io": ""
+    "express": "^5.2.1",
+    "leaflet": "^1.9.4",
+    "mqtt": "^5.15.0",
+    "socket.io": "^4.8.3"
   },
   "name": "mqttstream",
   "version": "1.0.0",
@@ -13,7 +11,7 @@
   "main": "mqtt.js",
   "devDependencies": {},
   "scripts": {
-    "test": "mqtt.js #"
+    "test": "node --check mqtt.js"
   },
   "author": "int2k",
   "license": "ISC"

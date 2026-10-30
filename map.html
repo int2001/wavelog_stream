@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="%%prefix%%">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <link rel="stylesheet" href="%%prefix%%leaflet/leaflet.css" />
+  <style type="text/css">
+    html, body { height: 100%; margin: 0; }
+    #map { height: 100%; }
+    #topbar { position:absolute; top:0; left:0; right:0; z-index:1000; background:#212529; color:#fff; padding:4px 8px; border-bottom:1px solid #000; font-family: system-ui, sans-serif; font-size:13px; display:flex; align-items:center; }
+    #topbar label { margin-right: 8px; white-space: nowrap; }
+    #topbar a { color: rgba(255,255,255,.75); }
+    #topbar .brand { color:#fff; font-size:15px; margin-left:auto; }
+    #topbar .brand a { color:#fff; }
+    #topbar .brand a:hover { text-decoration:underline; }
+    .gridlabel { font-size:10px; color:#333; text-shadow: 0 0 3px #fff, 0 0 3px #fff; font-weight:bold; }
+    #legend { position:absolute; bottom:10px; right:10px; z-index:1000; background:rgba(224,224,224,0.95); color:#000; padding:4px 8px; border:1px solid #000; font-family:system-ui,sans-serif; font-size:12px; }
+    .bandentry { cursor:pointer; user-select:none; }
+    .bandentry.off { opacity:.35; text-decoration:line-through; }
+    @keyframes flashqso { 50% { opacity:.1 } }
+    .flashqso { animation: flashqso .5s linear 6; }
+  </style>
+</head>
+<body>
+  <div id="topbar">
+    <a href="%%prefix%%">&larr; Table</a>
+    <label><input type="checkbox" id="gridToggle" checked> Grid</label> |
+    <label><input type="checkbox" id="fSSB" checked> SSB</label>
+    <label><input type="checkbox" id="fCW" checked> CW</label>
+    <label><input type="checkbox" id="fDigi" checked> Digi</label>
+    <label><input type="checkbox" id="fOther" checked> Other</label>
+    <span class="brand"><a href="https://github.com/int2001/wavelog_stream">Wavelog-Stream</a> <small>by DJ7NT</small></span>
+  </div>
+  <div id="legend"><div id="legendBody"></div></div>
+  <div id="map"></div>
+  <script src="%%prefix%%socket.io/socket.io.js"></script>
+  <script src="%%prefix%%leaflet/leaflet.js"></script>
+  <script type="text/javascript">
+  (function() {
+    const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const filter = new URLSearchParams(window.location.search).get('call') || '';
+
+    const map = L.map('map').setView([40, 10], 4);
+    const syncZoomOffset = () => { map.zoomControl.getContainer().style.marginTop = document.getElementById('topbar').offsetHeight + 'px'; };
+    window.addEventListener('resize', syncZoomOffset);
+    syncZoomOffset();
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // Maidenhead 4/6/8-char grid -> [lat, lon] of square center, null if unparsable
+    function gridToLatLon(grid) {
+      if (typeof grid !== 'string' || !/^[A-Ra-r]{2}[0-9]{2}(?:[A-Xa-x]{2}(?:[0-9]{2})?)?$/.test(grid.trim())) return null;
+      const g = grid.trim().toUpperCase();
+      const lon = -180 + (g.charCodeAt(0)-65)*20 + (g.charCodeAt(2)-48)*2
+        + (g.length >= 6 ? (g.charCodeAt(4)-65)/12 : 0)
+        + (g.length === 8 ? (g.charCodeAt(6)-48)/120 + 1/240 : (g.length >= 6 ? 1/24 : 1));
+      const lat = -90 + (g.charCodeAt(1)-65)*10 + (g.charCodeAt(3)-48)
+        + (g.length >= 6 ? (g.charCodeAt(5)-65)/24 : 0)
+        + (g.length === 8 ? (g.charCodeAt(7)-48)/240 + 1/480 : (g.length >= 6 ? 1/48 : 0.5));
+      return [lat, lon];
+    }
+
+    // ---- filters ----
+    const DIGI = ["FT4","FT8","FT2","JS8","JT65","JT9","PSK31","PSK63","RTTY","OLIVIA","MFSK","CONTESTIA"];
+    function modeClass(m) {
+      const u = String(m || '').toUpperCase();
+      if (/SSB|USB|LSB/.test(u)) return 'ssb';
+      if (u === 'CW') return 'cw';
+      if (DIGI.includes(u)) return 'digi';
+      return 'other';   // FM/AM/DV/...
+    }
+    const modeFilter = new Set(['ssb','cw','digi','other']);   // checked = shown, none checked = nothing shown
+    const bandFilter = new Set();
+    const passesFilters = (q) => modeFilter.has(modeClass(q.mode)) && bandFilter.has(q.band);
+
+    // ---- band colors ----
+    const BAND_COLORS = {"160m":"#8c2d2d","80m":"#b35835","75m":"#c98a4b","60m":"#c9a227","40m":"#8a9a3b","30m":"#4e9a4e","20m":"#2e8b74","17m":"#3f7f9e","15m":"#3b5fa8","12m":"#5a4fa8","10m":"#7a4f9e","6m":"#a85b8f","4m":"#b5486f","2m":"#5d8aa8","70cm":"#708090","23cm":"#9aa5b1"};
+    const bandColor = (b) => BAND_COLORS[b] || 'hsl(' + [...String(b)].reduce((h,c) => (h*31+c.charCodeAt(0))%360, 7) + ',55%,45%)';
+
+    // ---- QSO cache + drawing ----
+    const cache = [];               // all QSOs matching call filter, newest-first
+    const CACHE_MAX = 500;
+    const drawn = [];               // [{group, time, band}], time-ordered
+    const MAX_QSOS = 100;
+    const knownBands = new Set();
+
+    function fadeOut(group) {
+      group.eachLayer(l => { const el = l.getElement(); if (el) { el.style.transition = 'opacity 1s'; el.style.opacity = '0'; } });
+      setTimeout(() => map.removeLayer(group), 1000);
+    }
+
+    const bearing = (a, b) => {   // great-circle bearing a->b, deg from north
+      const f1 = a[0]*Math.PI/180, f2 = b[0]*Math.PI/180, dl = (b[1]-a[1])*Math.PI/180;
+      return Math.atan2(Math.sin(dl)*Math.cos(f2),
+        Math.cos(f1)*Math.sin(f2)-Math.sin(f1)*Math.cos(f2)*Math.cos(dl)) * 180/Math.PI;
+    };
+
+    function drawQso(q, flash) {
+      const from = gridToLatLon(q.station_grid);
+      const to = gridToLatLon(q.grid);
+      if (!from || !to) return;
+      const popup = esc(q.qso_time) + '<br>' + esc(q.station_call) + ' &rarr; ' + esc(q.call) + '<br>' + esc(q.band) + ' ' + esc(q.mode);
+      const group = L.layerGroup([
+        L.polyline([from, to], {color: bandColor(q.band), weight:2, opacity:0.8}).bindPopup(popup),
+        L.marker(to, {
+          icon: L.divIcon({ className:'arrow', iconSize:[14,14],
+            html:`<span style="display:inline-block;transform:rotate(${bearing(from,to)-90}deg);color:${bandColor(q.band)};font-size:14px;line-height:14px">&#10148;</span>` }),
+          interactive:false
+        })
+      ]).addTo(map);
+      if (flash) for (const l of group.getLayers()) { const el = l.getElement(); if (el) el.classList.add('flashqso'); }
+      drawn.push({group: group, time: q.qso_time, band: q.band});
+      while (drawn.length > MAX_QSOS) fadeOut(drawn.shift().group);
+    }
+
+    function render() {
+      for (const d of drawn) map.removeLayer(d.group);
+      drawn.length = 0;
+      for (const q of cache) {
+        if (drawn.length >= MAX_QSOS) break;
+        if (passesFilters(q)) drawQso(q);
+      }
+      updateLegend();
+    }
+
+    function cacheAdd(q) {
+      cache.unshift(q);
+      if (cache.length > CACHE_MAX) cache.length = CACHE_MAX;
+      if (q.band && !knownBands.has(q.band)) { knownBands.add(q.band); bandFilter.add(q.band); updateLegend(); }
+    }
+
+    function onQso(q) {
+      if (filter !== '' && filter !== q.station_call) return;
+      cacheAdd(q);
+      if (passesFilters(q)) { drawQso(q, true); updateLegend(); }
+    }
+
+    // ---- band filter checkboxes (dynamic) ----
+    const bandSortKey = (b) => {   // cm of wavelength, bigger = longer band first
+      const m = String(b).match(/^(\d+(?:\.\d+)?)(m|cm|mm)$/i);
+      if (!m) return 0;
+      const unit = m[2].toLowerCase();
+      return parseFloat(m[1]) * (unit === 'm' ? 100 : unit === 'cm' ? 1 : 0.1);
+    };
+    const sortedBands = () => [...knownBands].sort((a,b) => bandSortKey(b) - bandSortKey(a));
+
+    // ---- legend = band filter (click entry to toggle) ----
+    function updateLegend() {
+      const body = document.getElementById('legendBody');
+      body.innerHTML = '';
+      for (const b of sortedBands()) {
+        const chip = document.createElement('span');
+        chip.style.cssText = 'display:inline-block;width:10px;height:10px;margin-right:4px;border:1px solid #555;background:' + bandColor(b);
+        const line = document.createElement('div');
+        line.className = 'bandentry' + (bandFilter.has(b) ? '' : ' off');
+        line.title = 'click to filter band';
+        line.appendChild(chip);
+        line.appendChild(document.createTextNode(b));
+        line.addEventListener('click', () => { bandFilter.has(b) ? bandFilter.delete(b) : bandFilter.add(b); render(); });
+        body.appendChild(line);
+      }
+    }
+
+    // ---- maidenhead grid overlay ----
+    let gridLayer = null;
+
+    function maidName(lon, lat, squares) {
+      const name = String.fromCharCode(65 + Math.floor((lon+180)/20) % 18) + String.fromCharCode(65 + Math.floor((lat+90)/10) % 18);
+      return squares ? name + (Math.floor((lon+180)/2) % 10) + (Math.floor((lat+90)/1) % 10) : name;
+    }
+
+    function redrawGrid() {
+      if (!gridLayer) return;
+      map.removeLayer(gridLayer);
+      gridLayer = L.layerGroup().addTo(map);
+      const b = map.getBounds();
+      const squares = map.getZoom() >= 5;
+      const stepLon = squares ? 2 : 20, stepLat = squares ? 1 : 10;
+      const w = Math.max(-180, Math.floor(b.getWest()/stepLon)*stepLon);
+      const e = Math.min(180, b.getEast());
+      const s = Math.max(-90, Math.floor(b.getSouth()/stepLat)*stepLat);
+      const n = Math.min(90, b.getNorth());
+      for (let lon = w; lon <= e; lon += stepLon)
+        gridLayer.addLayer(L.polyline([[s,lon],[n,lon]], {color:'#666', weight:1, opacity:0.5, interactive:false}));
+      for (let lat = s; lat <= n; lat += stepLat)
+        gridLayer.addLayer(L.polyline([[lat,w],[lat,e]], {color:'#666', weight:1, opacity:0.5, interactive:false}));
+      for (let lon = w; lon < e; lon += stepLon)
+        for (let lat = s; lat < n; lat += stepLat)
+          gridLayer.addLayer(L.marker([lat + stepLat/2, lon + stepLon/2], {
+            icon: L.divIcon({className:'gridlabel', html: maidName(lon, lat, squares), iconSize:null}),
+            interactive:false
+          }));
+    }
+
+    document.getElementById('gridToggle').addEventListener('change', (e) => {
+      if (e.target.checked) { gridLayer = L.layerGroup().addTo(map); redrawGrid(); }
+      else { map.removeLayer(gridLayer); gridLayer = null; }
+    });
+    map.on('moveend zoomend', redrawGrid);
+
+    // grid on by default (checkbox ships checked)
+    gridLayer = L.layerGroup().addTo(map);
+    redrawGrid();
+
+    // ---- mode filter checkboxes ----
+    for (const [id, cls] of [['fSSB','ssb'],['fCW','cw'],['fDigi','digi'],['fOther','other']]) {
+      document.getElementById(id).addEventListener('change', (e) => {
+        e.target.checked ? modeFilter.add(cls) : modeFilter.delete(cls);
+        render();
+      });
+    }
+
+    // ---- socket ----
+    const socket = io.connect({ path: "%%prefix%%socket.io" });
+    socket.on('history', function(historyData) {
+      const all = [];
+      for (const [stationCall, qsos] of Object.entries(historyData)) {
+        if (filter === '' || filter === stationCall) all.push(...qsos);
+      }
+      all.sort((a, b) => b.qso_time.localeCompare(a.qso_time));
+      for (const q of all) cacheAdd(q);
+      render();
+    });
+    socket.on('mqtt', onQso);
+  })();
+  </script>
+</body>
+</html>

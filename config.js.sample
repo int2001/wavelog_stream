@@ -6,7 +6,8 @@ const config = {
 	whitelist_url: "https://laber",
 	whitelist_enabled: false,
 	webport: 8000,
-	webbind:"0.0.0.0"
+	webbind:"0.0.0.0",
+	qsoHistoryFile: "./qso_history.json"
 };
 
 module.exports = config;

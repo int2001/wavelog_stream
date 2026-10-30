@@ -1,44 +1,31 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <base href="/">
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <style type="text/css">
-    #mqtt{ border: 1px solid #444; overflow-x:hidden; overflow-y:auto; background-color:#333; color: #EEE; text-shadow:#000 0 0 2px; height: 400px; padding: 10px; font-size:12px; line-height:20px;}
-    .monospace{font-family: Monaco,"Bitstream Vera Sans Mono","Lucida Console",Terminal,monospace;}
-    .selection::selection , .selection *::selection{background: #EEE;color:#000;border-color:#000; text-shadow:#fff 0 0 2px;}
-    .selection::-moz-selection , .selection *::-moz-selection{background: #EEE;color:#000;border-color:#000; text-shadow:#fff 0 0 2px;}
-	table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: center;
-        }
-        th {
-            background-color: #f4f4f4;
-        }
-	.new-row { background-color: #ff0099; transition: background-color 1.5s ease; }
-  </style>
+  <link rel="stylesheet" href="%%prefix%%style.css" />
 </head>
 <body>
-<h1>Live QSO-View</h1>
-    <p style="text-align: right;"><small>Generated with <a href="https://github.com/int2001/wavelog_stream">Wavelog-Stream</a> by DJ7NT</small></p>
-    <table id="messagesTable">
+<nav class="navbar">
+  <a href="%%prefix%%map">Map</a>
+  <span class="brand"><a href="https://github.com/int2001/wavelog_stream">Wavelog-Stream</a> <small>by DJ7NT</small></span>
+</nav>
+<div class="container">
+  <div class="card">
+    <div class="card-header">Live QSO-View</div>
+    <div class="card-body">
+      <table id="messagesTable">
         <thead>
-            <tr>
-                <th>Wann</th>
-                <th>Von</th>
-                <th>Von Grid</th>
-                <th>Nach</th>
-                <th>Nach Grid</th>
-                <th>Band</th>
-                <th>QRG</th>
-                <th>Mode</th>
-                <th>RSTR</th>
-                <th>RSTS</th>
-            </tr>
+          <tr>
+            <th>Wann</th>
+            <th>Von</th>
+            <th>Von Grid</th>
+            <th>Nach</th>
+            <th>Nach Grid</th>
+            <th>Band</th>
+            <th>QRG</th>
+            <th>Mode</th>
+            <th>RSTR</th>
+            <th>RSTS</th>
+          </tr>
         </thead>
 	<tbody id="tableBody">
