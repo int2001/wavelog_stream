@@ -29,6 +29,7 @@ app.use((req, res, next) => {
 const io = require('socket.io')(http, {path: `${config.prefix}socket.io`,});		// socket.io einbinden
 
 app.use(config.prefix+'leaflet', express.static(path.join(__dirname, 'node_modules', 'leaflet', 'dist')));
+app.use(config.prefix+'style.css', express.static(path.join(__dirname, 'style.css')));
 
 app.get(config.prefix+'map', (req, res) => {
 	let baseHTML = fs.readFileSync(path.join(__dirname, 'map.html'),'utf8');

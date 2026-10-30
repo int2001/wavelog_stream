@@ -7,10 +7,14 @@
   <style type="text/css">
     html, body { height: 100%; margin: 0; }
     #map { height: 100%; }
-    #topbar { position:absolute; top:0; left:0; right:0; z-index:1000; background:#fff; padding:4px 8px; border-bottom:1px solid #ddd; font-family: sans-serif; font-size:13px; }
+    #topbar { position:absolute; top:0; left:0; right:0; z-index:1000; background:#212529; color:#fff; padding:4px 8px; border-bottom:1px solid #000; font-family: system-ui, sans-serif; font-size:13px; display:flex; align-items:center; }
     #topbar label { margin-right: 8px; white-space: nowrap; }
+    #topbar a { color: rgba(255,255,255,.75); }
+    #topbar .brand { color:#fff; font-size:15px; margin-left:auto; }
+    #topbar .brand a { color:#fff; }
+    #topbar .brand a:hover { text-decoration:underline; }
     .gridlabel { font-size:10px; color:#333; text-shadow: 0 0 3px #fff, 0 0 3px #fff; font-weight:bold; }
-    #legend { position:absolute; bottom:10px; right:10px; z-index:1000; background:#fff; padding:4px 8px; border:1px solid #ddd; font-family:sans-serif; font-size:12px; }
+    #legend { position:absolute; bottom:10px; right:10px; z-index:1000; background:rgba(224,224,224,0.95); color:#000; padding:4px 8px; border:1px solid #000; font-family:system-ui,sans-serif; font-size:12px; }
     .bandentry { cursor:pointer; user-select:none; }
     .bandentry.off { opacity:.35; text-decoration:line-through; }
     @keyframes flashqso { 50% { opacity:.1 } }
@@ -19,12 +23,13 @@
 </head>
 <body>
   <div id="topbar">
-    <a href="%%prefix%%">&larr; Table</a> |
+    <a href="%%prefix%%">&larr; Table</a>
     <label><input type="checkbox" id="gridToggle" checked> Grid</label> |
     <label><input type="checkbox" id="fSSB" checked> SSB</label>
     <label><input type="checkbox" id="fCW" checked> CW</label>
     <label><input type="checkbox" id="fDigi" checked> Digi</label>
     <label><input type="checkbox" id="fOther" checked> Other</label>
+    <span class="brand"><a href="https://github.com/int2001/wavelog_stream">Wavelog-Stream</a> <small>by DJ7NT</small></span>
   </div>
   <div id="legend"><div id="legendBody"></div></div>
   <div id="map"></div>

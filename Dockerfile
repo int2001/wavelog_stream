@@ -32,6 +32,7 @@ COPY --from=prerelease /usr/src/app/index.html .
 COPY --from=prerelease /usr/src/app/index_iframe.html .
 COPY --from=prerelease /usr/src/app/index_nojs.html .
 COPY --from=prerelease /usr/src/app/map.html .
+COPY --from=prerelease /usr/src/app/style.css .
 
 # run the app
 USER bun

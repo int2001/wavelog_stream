@@ -1,167 +1,157 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <base href="%%prefix%%">
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <style type="text/css">
-	table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: center;
-        }
-        th {
-            background-color: #f4f4f4;
-        }
-	.new-row { background-color: #ff0099; transition: background-color 1.5s ease; }
-  </style>
+  <link rel="stylesheet" href="%%prefix%%style.css" />
 </head>
 <body>
-<p><a href="%%prefix%%map">Map</a></p>
-<h1>Live QSO-View</h1>
-    <p style="text-align: right;"><small>Generated with <a href="https://github.com/int2001/wavelog_stream">Wavelog-Stream</a> by DJ7NT</small></p>
-    <table id="messagesTable">
+<nav class="navbar">
+  <a href="%%prefix%%map">Map</a>
+  <span class="brand"><a href="https://github.com/int2001/wavelog_stream">Wavelog-Stream</a> <small>by DJ7NT</small></span>
+</nav>
+<div class="container">
+  <div class="card">
+    <div class="card-header">Live QSO-View</div>
+    <div class="card-body">
+      <table id="messagesTable">
         <thead>
-            <tr>
-                <th>Wann</th>
-                <th>Von</th>
-                <th>Von Grid</th>
-                <th>Nach</th>
-                <th>Nach Grid</th>
-                <th>Band</th>
-                <th>QRG</th>
-                <th>Mode</th>
-                <th>RSTR</th>
-                <th>RSTS</th>
-            </tr>
+          <tr>
+            <th>Wann</th>
+            <th>Von</th>
+            <th>Von Grid</th>
+            <th>Nach</th>
+            <th>Nach Grid</th>
+            <th>Band</th>
+            <th>QRG</th>
+            <th>Mode</th>
+            <th>RSTR</th>
+            <th>RSTS</th>
+          </tr>
         </thead>
         <tbody>
-            <!-- Rows will be dynamically added here -->
+          <!-- Rows will be dynamically added here -->
         </tbody>
-    </table>
-    <br/>
-	<script type="text/javascript">
-	document.write(`<script src="%%prefix%%socket.io/socket.io.js"><\/script>`);
-	</script>
-	<script type="text/javascript">
-		const showTime = %%showTime%%;
-	</script>
-	<script type="text/javascript" defer>
-		(function() {
-					const queryString = window.location.search;
-					const urlParams = new URLSearchParams(queryString);
-					const filter = urlParams.get('call') || '';
-					const tableBody = document.getElementById('messagesTable').querySelector('tbody');
-					var lines = 0;
-					var socket = io.connect({ path: "%%prefix%%socket.io" }); // http://localhost:8000");
-					socket.on('history', function(historyData) {
-						// Flatten all QSOs into a single array and sort by time descending
-						const allQsos = [];
-						for (const [stationCall, qsos] of Object.entries(historyData)) {
-							if ((filter == '') || (filter == stationCall)) {
-								for (const qso of qsos) {
-									allQsos.push(qso);
-								}
-							}
-						}
-						// Sort by qso_time descending (newest first)
-						allQsos.sort((a, b) => b.qso_time.localeCompare(a.qso_time));
+      </table>
+    </div>
+  </div>
+</div>
+  <script src="%%prefix%%socket.io/socket.io.js"></script>
+  <script type="text/javascript">
+    const showTime = %%showTime%%;
+  </script>
+  <script type="text/javascript" defer>
+    (function() {
+        const queryString = window.location.search;
+        const urlParams = new URLSearchParams(queryString);
+        const filter = urlParams.get('call') || '';
+        const tableBody = document.getElementById('messagesTable').querySelector('tbody');
+        var lines = 0;
+        var socket = io.connect({ path: "%%prefix%%socket.io" });
+        socket.on('history', function(historyData) {
+          // Flatten all QSOs into a single array and sort by time descending
+          const allQsos = [];
+          for (const [stationCall, qsos] of Object.entries(historyData)) {
+            if ((filter == '') || (filter == stationCall)) {
+              for (const qso of qsos) {
+                allQsos.push(qso);
+              }
+            }
+          }
+          // Sort by qso_time descending (newest first)
+          allQsos.sort((a, b) => b.qso_time.localeCompare(a.qso_time));
 
-						// Render historical QSOs (no pink highlight)
-						for (const message of allQsos) {
-							const row = document.createElement('tr');
-							const timestampCell = document.createElement('td');
-							const CellCall = document.createElement('td');
-							const CellGrid = document.createElement('td');
-							const CellStationCall = document.createElement('td');
-							const CellStationGrid = document.createElement('td');
-							const CellBand = document.createElement('td');
-							const CellQRG = document.createElement('td');
-							const CellMode = document.createElement('td');
-							const CellRSTR = document.createElement('td');
-							const CellRSTS = document.createElement('td');
+          // Render historical QSOs (no pink highlight)
+          for (const message of allQsos) {
+            const row = document.createElement('tr');
+            const timestampCell = document.createElement('td');
+            const CellCall = document.createElement('td');
+            const CellGrid = document.createElement('td');
+            const CellStationCall = document.createElement('td');
+            const CellStationGrid = document.createElement('td');
+            const CellBand = document.createElement('td');
+            const CellQRG = document.createElement('td');
+            const CellMode = document.createElement('td');
+            const CellRSTR = document.createElement('td');
+            const CellRSTS = document.createElement('td');
 
-							CellCall.textContent = message.call;
-							CellGrid.textContent = message.grid;
-							CellStationCall.textContent = message.station_call;
-							CellStationGrid.textContent = message.station_grid;
-							CellBand.textContent = message.band;
-							CellQRG.textContent = message.qrg;
-							CellMode.textContent = message.mode;
-							CellRSTR.textContent = message.RST_RCVD;
-							CellRSTS.textContent = message.RST_SENT;
-							timestampCell.textContent = tsclean(message.qso_time);
+            CellCall.textContent = message.call;
+            CellGrid.textContent = message.grid;
+            CellStationCall.textContent = message.station_call;
+            CellStationGrid.textContent = message.station_grid;
+            CellBand.textContent = message.band;
+            CellQRG.textContent = message.qrg;
+            CellMode.textContent = message.mode;
+            CellRSTR.textContent = message.RST_RCVD;
+            CellRSTS.textContent = message.RST_SENT;
+            timestampCell.textContent = tsclean(message.qso_time);
 
-							row.appendChild(timestampCell);
-							row.appendChild(CellStationCall);
-							row.appendChild(CellStationGrid);
-							row.appendChild(CellCall);
-							row.appendChild(CellGrid);
-							row.appendChild(CellBand);
-							row.appendChild(CellQRG);
-							row.appendChild(CellMode);
-							row.appendChild(CellRSTR);
-							row.appendChild(CellRSTS);
-							tableBody.appendChild(row);
-						}
-					});
-					socket.on('mqtt', function(message) {
-						if ((filter == '') || (filter == message.station_call)) {
-							const row = document.createElement('tr');
-							const timestampCell = document.createElement('td');
-							const CellCall = document.createElement('td');
-							const CellGrid = document.createElement('td');
-							const CellStationCall = document.createElement('td');
-							const CellStationGrid = document.createElement('td');
-							const CellBand = document.createElement('td');
-							const CellQRG = document.createElement('td');
-							const CellMode = document.createElement('td');
-							const CellRSTR = document.createElement('td');
-							const CellRSTS = document.createElement('td');
+            row.appendChild(timestampCell);
+            row.appendChild(CellStationCall);
+            row.appendChild(CellStationGrid);
+            row.appendChild(CellCall);
+            row.appendChild(CellGrid);
+            row.appendChild(CellBand);
+            row.appendChild(CellQRG);
+            row.appendChild(CellMode);
+            row.appendChild(CellRSTR);
+            row.appendChild(CellRSTS);
+            tableBody.appendChild(row);
+          }
+        });
+        socket.on('mqtt', function(message) {
+          if ((filter == '') || (filter == message.station_call)) {
+            const row = document.createElement('tr');
+            const timestampCell = document.createElement('td');
+            const CellCall = document.createElement('td');
+            const CellGrid = document.createElement('td');
+            const CellStationCall = document.createElement('td');
+            const CellStationGrid = document.createElement('td');
+            const CellBand = document.createElement('td');
+            const CellQRG = document.createElement('td');
+            const CellMode = document.createElement('td');
+            const CellRSTR = document.createElement('td');
+            const CellRSTS = document.createElement('td');
 
-							CellCall.textContent = message.call;
-							CellGrid.textContent = message.grid;
-							CellStationCall.textContent = message.station_call;
-							CellStationGrid.textContent = message.station_grid;
-							CellBand.textContent = message.band;
-							CellQRG.textContent = message.qrg;
-							CellMode.textContent = message.mode;
-							CellRSTR.textContent = message.RST_RCVD;
-							CellRSTS.textContent = message.RST_SENT;
-							timestampCell.textContent = tsclean(message.qso_time);
+            CellCall.textContent = message.call;
+            CellGrid.textContent = message.grid;
+            CellStationCall.textContent = message.station_call;
+            CellStationGrid.textContent = message.station_grid;
+            CellBand.textContent = message.band;
+            CellQRG.textContent = message.qrg;
+            CellMode.textContent = message.mode;
+            CellRSTR.textContent = message.RST_RCVD;
+            CellRSTS.textContent = message.RST_SENT;
+            timestampCell.textContent = tsclean(message.qso_time);
 
-							row.appendChild(timestampCell);
-							row.appendChild(CellStationCall);
-							row.appendChild(CellStationGrid);
-							row.appendChild(CellCall);
-							row.appendChild(CellGrid);
-							row.appendChild(CellBand);
-							row.appendChild(CellQRG);
-							row.appendChild(CellMode);
-							row.appendChild(CellRSTR);
-							row.appendChild(CellRSTS);
-							row.classList.add('new-row');
-							tableBody.insertBefore(row, tableBody.firstChild);
-							setTimeout(() => {
-								row.classList.remove('new-row');
-							}, 1500);
-						}
+            row.appendChild(timestampCell);
+            row.appendChild(CellStationCall);
+            row.appendChild(CellStationGrid);
+            row.appendChild(CellCall);
+            row.appendChild(CellGrid);
+            row.appendChild(CellBand);
+            row.appendChild(CellQRG);
+            row.appendChild(CellMode);
+            row.appendChild(CellRSTR);
+            row.appendChild(CellRSTS);
+            row.classList.add('new-row');
+            tableBody.insertBefore(row, tableBody.firstChild);
+            setTimeout(() => {
+              row.classList.remove('new-row');
+            }, 1500);
+          }
 
-					});
-				})();
-		function tsclean(timestamp) {
-			if (!showTime) {
-				return timestamp.split(' ')[0];
-			}
-			const parts = timestamp.split(':');
-			if (parts.length === 2) {
-				return `${timestamp}:00`;
-			}
-			return timestamp; // Already normalized
-		}
-	</script>
+        });
+    })();
+    function tsclean(timestamp) {
+      if (!showTime) {
+        return timestamp.split(' ')[0];
+      }
+      const parts = timestamp.split(':');
+      if (parts.length === 2) {
+        return `${timestamp}:00`;
+      }
+      return timestamp; // Already normalized
+    }
+  </script>
 </body>
 </html>
