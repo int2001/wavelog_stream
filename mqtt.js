@@ -12,8 +12,11 @@ var qsoHistory = new Map();
 var qsoHistoryPath = config.qsoHistoryFile || "./qso_history.json";
 var saveTimeout = null;
 
-// Normalize prefix to always end with / (except for empty prefix)
-if (config.prefix && config.prefix !== '' && !config.prefix.endsWith('/')) {
+// Normalize prefix to start and end with / (empty prefix becomes /)
+if (config.prefix && !config.prefix.startsWith('/')) {
+	config.prefix = '/' + config.prefix;
+}
+if (!config.prefix.endsWith('/')) {
 	config.prefix = config.prefix + '/';
 }
 
@@ -160,7 +163,9 @@ function handle_mqtt(topic,message) {
 	if (!(config.whitelist_enabled) || (wlist.includes(userName))) {
 		if (topic.startsWith('wavelog/qso/logged')) {
 			const tobrowser=parse_qso_msg(msg.content);
-			if (tobrowser.qso_time) {
+			if (!tobrowser.qso_time) {
+				console.log("No Timestamp!");
+			} else {
 				if (isFarFuture(tobrowser.qso_time)) {
 					console.log("Skipping QSO with timestamp far in future: "+tobrowser.qso_time);
 				} else {
@@ -170,10 +175,8 @@ function handle_mqtt(topic,message) {
 					}
 					addToHistory(tobrowser);
 				}
-			} else {
-				console.log("No Timestamp!");
+				console.log(topic+' / QSO from: '+tobrowser.station_call+' with '+tobrowser.call+' in Mode: '+tobrowser.mode+' at '+tobrowser.qso_time);
 			}
-			console.log(topic+' / QSO from: '+tobrowser.station_call+' with '+tobrowser.call+' in Mode: '+tobrowser.mode+' at '+tobrowser.qso_time);
 		} else {
 			// tobrowser=parse_cat_msg(topic,msg.content);
 			// io.emit("cat",tobrowser);				// und raus an den Browser (nur fuer DIESES Socket, nicht fuer alle Clients) damit
@@ -228,13 +231,14 @@ async function getWhitelist() {
 
 function parse_qso_msg(msg) {
 	let retmsg={};
+	if (!msg || !msg.COL_TIME_ON) return retmsg;	// no/partial message -> empty, caller checks qso_time
 	retmsg.call=msg.COL_CALL;
 	retmsg.station_call=msg.COL_STATION_CALLSIGN;
 	retmsg.station_grid=msg.COL_MY_GRIDSQUARE;
 	retmsg.grid=msg.COL_GRIDSQUARE;
 	retmsg.band=msg.COL_BAND;
 	retmsg.mode=msg.COL_MODE
-	retmsg.qrg=msg.COL_FREQ/1000;
+	retmsg.qrg=msg.COL_FREQ/1000 || '';
 	retmsg.RST_RCVD=msg.COL_RST_RCVD;
 	retmsg.RST_SENT=msg.COL_RST_SENT;
 	retmsg.qso_time=msg.COL_TIME_ON;
